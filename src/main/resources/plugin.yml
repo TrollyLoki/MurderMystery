@@ -1,0 +1,36 @@
+name: MurderMystery
+main: net.trollyloki.MurderMystery.Main
+version: 1.5
+authors: [TrollyLoki, OtakusAreNEET]
+api-version: 1.13
+
+commands:
+  mm:
+    description: Control MurderMystery
+  
+permissions:
+  mm.start:
+    description: Allows you to start a game
+  mm.stop:
+    description: Allows you to manually end a game and/or disable shuffle mode
+  mm.create:
+    description: Allows you to create a new map in-game
+  mm.delete:
+    description: Allows you to delete maps
+  mm.kill:
+    description: Allows you to forcefully kill a player
+  mm.role:
+    description: Allows you to see the role of a player
+  mm.time:
+    description: Allows you to change the time remaining
+  mm.reload:
+    description: Allows you to reload the config
+  mm.update:
+    description: Notifies players when an update is available
+  mm.immune:
+    description: Makes you immune to being damaged in a game
+    default: false
+  mm.gamemode:
+    description: Allows you to change your gamemode during a game
+  mm.drop:
+    description: Allows you to drop items during a game
