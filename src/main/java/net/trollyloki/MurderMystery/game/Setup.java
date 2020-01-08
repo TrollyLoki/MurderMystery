@@ -28,14 +28,14 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Setup {
 	
-	public static String[] startRandom() {
+	public static String[] startRandom(List<Player> players) {
 		
 		boolean picking = true;
 		String map = null;
 		while (picking) {
 			
 			Object[] maps = Main.getPlugin().getConfig().getConfigurationSection("maps").getKeys(false).toArray();
-			if (maps.length < 1) return new String[]{null, "invalid-map"};
+			if (maps.length < 1) return new String[] {null, "invalid-map"};
 			int rand = ThreadLocalRandom.current().nextInt(0, maps.length);
 			map = (String) maps[rand];
 			
@@ -43,11 +43,11 @@ public class Setup {
 			if (!exempt) picking = false;
 		}
 		
-		return new String[] {map, startGame(map)};
+		return new String[] {map, startGame(map, players)};
 		
 	}
 	
-	public static String startGame(String map) {
+	public static String startGame(String map, List<Player> players) {
 		
 		if (!Main.getPlugin().getConfig().contains("maps." + map)) {
 			return "invalid-map";
@@ -62,7 +62,7 @@ public class Setup {
 		
 		// Check for minimum player count
 		List<Player> allPlayers = new ArrayList<Player>();
-		for (Player nextPlayer : Bukkit.getServer().getOnlinePlayers()) {
+		for (Player nextPlayer : players) {
 			allPlayers.add(nextPlayer);
 		}
 		
@@ -90,24 +90,24 @@ public class Setup {
 		// Create Required Variables
 		Player murderer;
 		Player detective;
-		Player deputy;
+		Player deputy = null;
 		List<Player> bystanders = new ArrayList<Player>();
-		
-		ItemStack bow;
 		
 		// Select Players
 		murderer = getRandomPlayer(allPlayers);
 		allPlayers.remove(murderer);
 		detective = getRandomPlayer(allPlayers);
 		allPlayers.remove(detective);
-		deputy = getRandomPlayer(allPlayers);
-		allPlayers.remove(deputy);
+		if (Main.getPlugin().getConfig().getBoolean("enable-deputy")) {
+			deputy = getRandomPlayer(allPlayers);
+			allPlayers.remove(deputy);
+		}
 		for (Player nextPlayer : allPlayers) {
 			bystanders.add(nextPlayer);
 		}
 		allPlayers.add(murderer);
 		allPlayers.add(detective);
-		allPlayers.add(deputy);
+		if (deputy != null) allPlayers.add(deputy);
 		
 		Main.sendDebug("Assigned roles");
 		//Main.sendDebug(String.valueOf(allPlayers));
@@ -132,12 +132,7 @@ public class Setup {
 		Main.sendDebug("Prepared players for game");
 		
 		// Give murderer their sword
-		ItemStack sword = new ItemStack(Material.IRON_SWORD, 1);
-		ItemMeta swordMeta = sword.getItemMeta();
-		swordMeta.setDisplayName(Main.getConfigString(false, "items.sword.name"));
-		swordMeta.setLore(Main.getConfigStringList(false, "items.sword.lore"));
-		swordMeta.setUnbreakable(true);
-		sword.setItemMeta(swordMeta);
+		ItemStack sword = getMurdererSword();
 		
 		int swordSlot = 1;
 		if (murderer.getInventory().getHeldItemSlot() == 1) swordSlot = 2;
@@ -146,13 +141,7 @@ public class Setup {
 		Main.sendDebug("Gave the murderer a sword");
 		
 		// Give detective their bow
-		bow = new ItemStack(Material.BOW, 1);
-		ItemMeta bowMeta = bow.getItemMeta();
-		bowMeta.setDisplayName(Main.getConfigString(false, "items.bow.name"));
-		bowMeta.setLore(Main.getConfigStringList(false, "items.bow.lore"));
-		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
-		bowMeta.setUnbreakable(true);
-		bow.setItemMeta(bowMeta);
+		ItemStack bow = getDetectiveBow();
 		
 		int bowSlot = 1;
 		if (detective.getInventory().getHeldItemSlot() == 1) bowSlot = 2;
@@ -166,6 +155,92 @@ public class Setup {
 		Main.sendDebug("Gave the detective an arrow");
 		
 		// Give deputy their bow
+		if (deputy != null) {
+			ItemStack dbow = getDeputyBow();
+		
+			int dbowSlot = 1;
+			if (deputy.getInventory().getHeldItemSlot() == 1) dbowSlot = 2;
+			deputy.getInventory().setItem(dbowSlot, dbow);
+			
+			Main.sendDebug("Gave the deputy a bow");
+		
+			// Give deputy an arrow
+			deputy.getInventory().setItem(17, new ItemStack(Material.ARROW, 1));
+			
+			Main.sendDebug("Gave the deputy an arrow");
+		}
+		
+		// Give bystanders their potion
+		ItemStack potion = getInvisPotion();
+		
+		if (potion != null) for (Player nextPlayer : bystanders) {
+			int potionSlot = 1;
+			if (nextPlayer.getInventory().getHeldItemSlot() == 1) potionSlot = 2;
+			nextPlayer.getInventory().setItem(potionSlot, potion);
+		}
+		
+		Main.sendDebug("Gave the bystanders potions");
+		
+		// Tell players their role
+		int fadeIn = Main.getPlugin().getConfig().getInt("titles.in");
+		int stay = Main.getPlugin().getConfig().getInt("titles.stay");
+		int fadeOut = Main.getPlugin().getConfig().getInt("titles.out");
+		murderer.sendTitle(Main.getConfigString(false, "titles.murderer.title"),
+				Main.getConfigString(false, "titles.murderer.subtitle"), fadeIn, stay, fadeOut);
+		detective.sendTitle(Main.getConfigString(false, "titles.detective.title"),
+				Main.getConfigString(false, "titles.detective.subtitle"), fadeIn, stay, fadeOut);
+		if (deputy != null) deputy.sendTitle(Main.getConfigString(false, "titles.deputy.title"),
+				Main.getConfigString(false, "titles.deputy.subtitle"), fadeIn, stay, fadeOut);
+		for (Player nextPlayer : bystanders) {
+			nextPlayer.sendTitle(Main.getConfigString(false, "titles.bystander.title"),
+					Main.getConfigString(false, "titles.bystander.subtitle"), fadeIn, stay, fadeOut);
+		}
+		
+		Main.sendDebug("Sent titles");
+		
+		// Send variables to Run class
+		Run.murderer = murderer;
+		Run.detective = detective;
+		Run.deputy = deputy;
+		Run.bystanders = bystanders;
+		Run.allPlayers = allPlayers;
+		Run.bow = bow;
+		Run.sword = sword;
+		Run.map = map;
+		
+		Main.sendDebug("Assigned global variables");
+    	
+		// Initiate Game
+		Main.sendDebug("Starting game...");
+		
+		Run.startGame();
+		
+		return "success";
+		
+	}
+	
+	public static ItemStack getMurdererSword() {
+		ItemStack sword = new ItemStack(Material.IRON_SWORD, 1);
+		ItemMeta swordMeta = sword.getItemMeta();
+		swordMeta.setDisplayName(Main.getConfigString(false, "items.sword.name"));
+		swordMeta.setLore(Main.getConfigStringList(false, "items.sword.lore"));
+		swordMeta.setUnbreakable(true);
+		sword.setItemMeta(swordMeta);
+		return sword;
+	}
+	
+	public static ItemStack getDetectiveBow() {
+		ItemStack bow = new ItemStack(Material.BOW, 1);
+		ItemMeta bowMeta = bow.getItemMeta();
+		bowMeta.setDisplayName(Main.getConfigString(false, "items.bow.name"));
+		bowMeta.setLore(Main.getConfigStringList(false, "items.bow.lore"));
+		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+		bowMeta.setUnbreakable(true);
+		bow.setItemMeta(bowMeta);
+		return bow;
+	}
+	
+	public static ItemStack getDeputyBow() {
 		ItemStack dbow = new ItemStack(Material.BOW, 1);
 		ItemMeta dbowMeta = dbow.getItemMeta();
 		dbowMeta.setDisplayName(Main.getConfigString(false, "items.deputy-bow.name"));
@@ -173,19 +248,12 @@ public class Setup {
 		dbowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
 		dbowMeta.setUnbreakable(true);
 		dbow.setItemMeta(dbowMeta);
+		return dbow;
+	}
+	
+	public static ItemStack getInvisPotion() {
+		if (!Main.getPlugin().getConfig().getBoolean("items.potion.enabled")) return null;
 		
-		int dbowSlot = 1;
-		if (deputy.getInventory().getHeldItemSlot() == 1) dbowSlot = 2;
-		deputy.getInventory().setItem(dbowSlot, dbow);
-		
-		Main.sendDebug("Gave the deputy a bow");
-		
-		// Give deputy an arrow
-		deputy.getInventory().setItem(17, new ItemStack(Material.ARROW, 1));
-		
-		Main.sendDebug("Gave the deputy an arrow");
-		
-		// Give bystanders their potion
 		String type = Main.getConfigString(false, "items.potion.type");
 		Material potionType = Material.POTION;
 		if (type.equalsIgnoreCase("normal")) potionType = Material.POTION;
@@ -218,52 +286,9 @@ public class Setup {
 		PotionEffect effect = new PotionEffect(PotionEffectType.INVISIBILITY, duration, 0, true, true);
 		potionMeta.addCustomEffect(effect, true);
 		potion.setItemMeta(potionMeta);
-		
-		for (Player nextPlayer : bystanders) {
-			int potionSlot = 1;
-			if (nextPlayer.getInventory().getHeldItemSlot() == 1) potionSlot = 2;
-			nextPlayer.getInventory().setItem(potionSlot, potion);
-		}
-		
-		Main.sendDebug("Gave the bystanders potions");
-		
-		// Tell players their role
-		int fadeIn = Main.getPlugin().getConfig().getInt("titles.in");
-		int stay = Main.getPlugin().getConfig().getInt("titles.stay");
-		int fadeOut = Main.getPlugin().getConfig().getInt("titles.out");
-		murderer.sendTitle(Main.getConfigString(false, "titles.murderer.title"),
-				Main.getConfigString(false, "titles.murderer.subtitle"), fadeIn, stay, fadeOut);
-		detective.sendTitle(Main.getConfigString(false, "titles.detective.title"),
-				Main.getConfigString(false, "titles.detective.subtitle"), fadeIn, stay, fadeOut);
-		deputy.sendTitle(Main.getConfigString(false, "titles.deputy.title"),
-				Main.getConfigString(false, "titles.deputy.subtitle"), fadeIn, stay, fadeOut);
-		for (Player nextPlayer : bystanders) {
-			nextPlayer.sendTitle(Main.getConfigString(false, "titles.bystander.title"),
-					Main.getConfigString(false, "titles.bystander.subtitle"), fadeIn, stay, fadeOut);
-		}
-		
-		Main.sendDebug("Sent titles");
-		
-		// Send variables to Run class
-		Run.murderer = murderer;
-		Run.detective = detective;
-		Run.deputy = deputy;
-		Run.bystanders = bystanders;
-		Run.allPlayers = allPlayers;
-		Run.bow = bow;
-		Run.sword = sword;
-		Run.map = map;
-		
-		Main.sendDebug("Assigned global variables");
-    	
-		// Initiate Game
-		Main.sendDebug("Starting game...");
-		
-		Run.startGame();
-		
-		return "success";
-		
+		return potion;
 	}
+	
 	
 	public static Player getRandomPlayer(Collection<? extends Player> players) {
 		int random = new Random().nextInt(players.size());

@@ -1,13 +1,16 @@
 package net.trollyloki.MurderMystery.commands;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 
-import net.md_5.bungee.api.ChatColor;
 import net.trollyloki.MurderMystery.Main;
 import net.trollyloki.MurderMystery.game.Maps;
 import net.trollyloki.MurderMystery.game.Run;
@@ -43,7 +46,18 @@ public class CommandMM implements CommandExecutor {
         				return false;
         			}
         			
-        			String result = Setup.startGame(args[1].toLowerCase());
+        			List<Player> players = new ArrayList<Player>();
+        			if (args.length > 2) {
+        				for (String name : args[2].split(",")) {
+        					Player p = Bukkit.getPlayerExact(name);
+        					if (p != null) players.add(p);
+        				}
+        			}
+        			else {
+        				players.addAll(Bukkit.getOnlinePlayers());
+        			}
+        			
+        			String result = Setup.startGame(args[1].toLowerCase(), players);
         			
         			String name = args[1].toLowerCase();
         			if (result != "invalid-map") name = Main.getConfigString(false, "maps." + args[1].toLowerCase() + ".name");
@@ -66,8 +80,19 @@ public class CommandMM implements CommandExecutor {
         			return false;
         		}
         		
+        		List<Player> players = new ArrayList<Player>();
+    			if (args.length > 1) {
+    				for (String name : args[1].split(",")) {
+    					Player p = Bukkit.getPlayerExact(name);
+    					if (p != null) players.add(p);
+    				}
+    			}
+    			else {
+    				players.addAll(Bukkit.getOnlinePlayers());
+    			}
+        		
         		Run.autoRestart = true;
-        		String[] result = Setup.startRandom();
+        		String[] result = Setup.startRandom(players);
         		
         		String name = null;
         		if (result[1] != "invalid-map") name = Main.getConfigString(false, "maps." + result[0].toLowerCase() + ".name");
@@ -142,6 +167,26 @@ public class CommandMM implements CommandExecutor {
 	        		return (result == "kill.success");
         		}
         		
+        	}
+        	
+        	if (args[0].equalsIgnoreCase("revive")) {
+        		if (!sender.hasPermission("mm.revive")) {
+        			sender.sendMessage(Main.getConfigString(false, "lang.command.no-perm"));
+        			return false;
+        		}
+        		
+        		if (args.length == 1) {
+        			sender.sendMessage(Main.getConfigString(false, "lang.command.revive.usage"));
+        			return false;
+        		}
+        		
+        		if (args.length >= 2) {
+        			Player toRevive = Bukkit.getPlayerExact(args[1]);
+        			String result = Run.revive(toRevive);
+					sender.sendMessage(Main.getConfigString(true, "lang.command." + result)
+							.replaceAll("%player%", args[1]));
+	        		return (result == "kill.success");
+        		}
         	}
         	
         	if (args[0].equalsIgnoreCase("role")) {

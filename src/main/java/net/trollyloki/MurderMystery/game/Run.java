@@ -393,6 +393,47 @@ public class Run implements Listener {
 		
 		return "not-playing";
 	}
+	
+	public static String revive(Player player) {
+		if (allPlayers.contains(player)) {
+			if (!(player == murderer || player == detective || player == deputy || bystanders.contains(player))) {
+				Main.sendDebug(player.getName() + " was revived");
+				
+				bystanders.add(player);
+				
+				player.getInventory().clear();
+				player.setGameMode(GameMode.ADVENTURE);
+				player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 99999, 255, true, false), true);
+				Location loc = Setup.getStartLocation(map);
+				if (loc == null) {
+					return "unknown-error";
+				}
+				player.teleport(loc);
+				player.setHealth(20);
+				
+				int potionSlot = 1;
+				if (player.getInventory().getHeldItemSlot() == 1) potionSlot = 2;
+				player.getInventory().setItem(potionSlot, Setup.getInvisPotion());
+				player.sendMessage(Main.getConfigString(false, "lang.messages.you-revived"));
+				
+				for (Player nextPlayer : allPlayers) {
+					if (nextPlayer != player) {
+						nextPlayer.sendMessage(Main.getConfigString(true, "lang.messages.player-revived").replaceAll("%player%", player.getName()));
+					}
+				}
+				
+				Main.sendDebug("Re-setup player");
+				
+				Timer.forceUpdate();
+				
+				return "revive.success";
+			}
+
+			return "revive.not-dead";
+		}
+		
+		return "not-playing";
+	}
 
 	private static void detectiveKilled() {
 		boolean noGrav = detective.isOnGround();
@@ -534,7 +575,7 @@ public class Run implements Listener {
 
 					@Override
 					public void run() {
-						Setup.startRandom();
+						Setup.startRandom(allPlayers);
 					}}, delay * 20);
 				
 			}

@@ -1,8 +1,8 @@
-name: MurderMystery
-main: net.trollyloki.MurderMystery.Main
-version: 1.5
+name: ${project.artifactId}
+main: ${project.groupId}.Main
+version: ${project.version}
 authors: [TrollyLoki, OtakusAreNEET]
-api-version: 1.13
+api-version: 1.15
 
 commands:
   mm:
@@ -19,6 +19,8 @@ permissions:
     description: Allows you to delete maps
   mm.kill:
     description: Allows you to forcefully kill a player
+  mm.revive:
+    description: Allows you to revive a player
   mm.role:
     description: Allows you to see the role of a player
   mm.time:

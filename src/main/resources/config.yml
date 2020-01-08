@@ -46,6 +46,8 @@ maps:
           location: 1,100,0
           block: AIR
       
+enable-deputy: false
+
 items:
   sword:
     name: '&4Murderer Sword'
@@ -60,6 +62,7 @@ items:
     lore:
     - 'Used to kill the murderer'
   potion:
+    enabled: false
     name: '&6Invis Potion'
     lore:
     - 'Used to hide from the murderer'
@@ -121,7 +124,9 @@ lang:
   prefix: '&8[&4MurderMystery&8]&r '
   messages:
     you-died: '&cYou were killed!'
+    you-revived: '&aYou were revived'
     player-died: '&cA player died!'
+    player-revived: '&aA player was revived'
     player-quit: '&c%player% left the server, so they were removed from the game'
     died-sound: ENTITY_PLAYER_DEATH
     killed-inno: '&6You killed an innocent player!'
@@ -139,7 +144,7 @@ lang:
     gold: '&6You picked up %amount% gold!'
     update: '&aAn update is available! Current version: %current%, new version: %new%. Download it from %url%'
   command:
-    usage: '&cUsage: /mm <start|shuffle|stop|reload|kill|role|tt|time>'
+    usage: '&cUsage: /mm <start|shuffle|stop|reload|kill|revive|role|tt|time>'
     no-perm: '&cYou do not have permission to do that'
     nan: '&cThat is not a valid number'
     invalid: '&cInvalid Usage. Use /mm for help'
@@ -175,6 +180,10 @@ lang:
       usage: '&cUsage: /mm kill <player>'
       success: '&aSuccessfully killed %player%'
       already-dead: '&cThat player is already dead'
+    revive:
+      usage: '&cUsage: /mm revive <player>'
+      success: '&aSuccessfully revived %player%'
+      not-dead: '&cThat player is not dead'
     role:
       usage: '&cUsage: /mm role <player>'
       success: '&a%player% is %role%'
