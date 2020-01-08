@@ -165,7 +165,7 @@ lang:
       usage: '&cUsage: /mm reload'
       success: '&aThe config has been reloaded'
     start:
-      usage: '&cUsage: /mm start <map>'
+      usage: '&cUsage: /mm start <map> [player1],[player2],[player3]...'
       already-running: '&cA game is already running'
       shuffle-enabled: '&cShuffle is enabled! Disable it first'
       invalid-map: '&c%map% does not exist'
