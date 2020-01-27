@@ -28,19 +28,20 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Setup {
 	
-	public static String[] startRandom(List<Player> players) {
+	public static String[] autoStart(List<Player> players, String map) {
 		
-		boolean picking = true;
-		String map = null;
-		while (picking) {
-			
-			Object[] maps = Main.getPlugin().getConfig().getConfigurationSection("maps").getKeys(false).toArray();
-			if (maps.length < 1) return new String[] {null, "invalid-map"};
-			int rand = ThreadLocalRandom.current().nextInt(0, maps.length);
-			map = (String) maps[rand];
-			
-			boolean exempt = Main.getPlugin().getConfig().getBoolean("maps." + map + ".shuffle-exempt");
-			if (!exempt) picking = false;
+		if (map.equals("")) {
+			boolean picking = true;
+			while (picking) {
+				
+				Object[] maps = Main.getPlugin().getConfig().getConfigurationSection("maps").getKeys(false).toArray();
+				if (maps.length < 1) return new String[] {null, "invalid-map"};
+				int rand = ThreadLocalRandom.current().nextInt(0, maps.length);
+				map = (String) maps[rand];
+				
+				boolean exempt = Main.getPlugin().getConfig().getBoolean("maps." + map + ".shuffle-exempt");
+				if (!exempt) picking = false;
+			}
 		}
 		
 		return new String[] {map, startGame(map, players)};

@@ -23,6 +23,8 @@ permissions:
     description: Allows you to revive a player
   mm.role:
     description: Allows you to see the role of a player
+  mm.changerole:
+    description: Allows you to change the role of a player
   mm.time:
     description: Allows you to change the time remaining
   mm.reload:

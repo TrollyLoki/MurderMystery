@@ -13,6 +13,7 @@ import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -38,7 +39,7 @@ import net.trollyloki.MurderMystery.Main;
 public class Run implements Listener {
 	
 	public static boolean gameRunning = false;
-	public static boolean autoRestart = false;
+	public static String autoRestartMap = null;
 	public static Boolean grace;
 	
 	public static Player murderer;
@@ -59,7 +60,7 @@ public class Run implements Listener {
 		
 		Main.sendDebug("Attempting to start timer...");
 		
-		Timer.CountdownTimer(plugin, plugin.getConfig().getInt("timer.time") + plugin.getConfig().getInt("timer.grace-period"));
+		Timer.CountdownTimer(plugin, plugin.getConfig().getInt("timer.time"), plugin.getConfig().getInt("timer.grace-period"));
 		gameRunning = true;
 		grace = true;
 		
@@ -70,14 +71,53 @@ public class Run implements Listener {
 	@EventHandler
 	public void onPaintingDestroyed(HangingBreakByEntityEvent event) {
 		if (gameRunning) {
+			Player player = null;
 			if (event.getRemover() instanceof Player) {
 				
-				Player player = (Player) event.getRemover();
-				if (allPlayers.contains(player)) {
-					event.setCancelled(true);
+				player = (Player) event.getRemover();
+				
+			}
+			
+			if (event.getRemover() instanceof Projectile) {
+				
+				Projectile projectile = (Projectile) event.getRemover();
+				if (projectile.getShooter() instanceof Player) {
+					player = (Player) projectile.getShooter();
 				}
 				
 			}
+			
+			if (player != null && allPlayers.contains(player))
+				event.setCancelled(true);
+			
+		}
+		
+	}
+	
+	@EventHandler
+	public void onItemFrameHit(EntityDamageByEntityEvent event) {
+		if (gameRunning) {
+			if (event.getEntity().getType() != EntityType.ITEM_FRAME) return;
+			
+			Player player = null;
+			if (event.getDamager() instanceof Player) {
+				
+				player = (Player) event.getDamager();
+				
+			}
+			
+			if (event.getDamager() instanceof Projectile) {
+				
+				Projectile projectile = (Projectile) event.getDamager();
+				if (projectile.getShooter() instanceof Player) {
+					player = (Player) projectile.getShooter();
+				}
+				
+			}
+			
+			if (player != null && allPlayers.contains(player))
+				event.setCancelled(true);
+			
 		}
 		
 	}
@@ -138,7 +178,6 @@ public class Run implements Listener {
 							}
 							
 							else {
-								detective.sendMessage(Main.getConfigString(false, "lang.messages.killed-inno"));
 								kill(player, false);
 								killedinno(detective);
 							}
@@ -196,7 +235,6 @@ public class Run implements Listener {
 							}
 							
 							else {
-								attacker.sendMessage(Main.getConfigString(false, "lang.messages.killed-inno"));
 								kill(player, false);
 								killedinno(attacker);
 							}
@@ -214,10 +252,21 @@ public class Run implements Listener {
 	}
 	
 	private void killedinno(Player player) {
-		PotionEffect effect = new PotionEffect(PotionEffectType.SLOW, 300, 255, true, false);
-		player.addPotionEffect(effect, true);
-		effect = new PotionEffect(PotionEffectType.BLINDNESS, 300, 255, true, false);
-		player.addPotionEffect(effect, true);
+		player.sendMessage(Main.getConfigString(false, "lang.messages.killed-inno"));
+		
+		if (Main.getPlugin().getConfig().getBoolean("kill-attacker-on-innocent-kill")) {
+			
+			kill(player, false);
+			
+		}
+		else {
+			
+			PotionEffect effect = new PotionEffect(PotionEffectType.SLOW, 300, 255, true, false);
+			player.addPotionEffect(effect, true);
+			effect = new PotionEffect(PotionEffectType.BLINDNESS, 300, 255, true, false);
+			player.addPotionEffect(effect, true);
+			
+		}
 	}
 	
 	@EventHandler
@@ -520,7 +569,7 @@ public class Run implements Listener {
 				Main.sendDebug("Sent ending titles");
 			}
 			else {
-				autoRestart = false;
+				autoRestartMap = null;
 			}
 			
 			Main.sendDebug("Attemping to end timer...");
@@ -546,7 +595,7 @@ public class Run implements Listener {
 			
 			
 			
-			if (autoRestart) {
+			if (autoRestartMap != null) {
 				
 				final int delay = Main.getPlugin().getConfig().getInt("timer.restart-delay");
 				for (Player nextPlayer : allPlayers) {
@@ -554,7 +603,10 @@ public class Run implements Listener {
 				}
 				
 				final List<Player> oldList = new ArrayList<Player>();
-				oldList.addAll(allPlayers);
+				for (Player player : allPlayers) {
+					if (player.isOnline()) oldList.add(player);
+				}
+				
 				
 				for (int i = 1; i < delay; i++) {
 					
@@ -575,7 +627,7 @@ public class Run implements Listener {
 
 					@Override
 					public void run() {
-						Setup.startRandom(allPlayers);
+						Setup.autoStart(oldList, autoRestartMap);
 					}}, delay * 20);
 				
 			}

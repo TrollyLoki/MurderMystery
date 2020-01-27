@@ -21,16 +21,18 @@ public class Timer implements Runnable {
 
     // Seconds
     private static int timerSeconds;
+    private static int graceSeconds;
     private static int secondsLeft;
 
     // Construct a timer, you could create multiple so for example if
     // you do not want these "actions"
-    public static void CountdownTimer(JavaPlugin plugin, int seconds) {
+    public static void CountdownTimer(JavaPlugin plugin, int seconds, int grace) {
         // Initializing fields
         timerPlugin = plugin;
 
         timerSeconds = seconds;
-        secondsLeft = seconds;
+        graceSeconds = grace;
+        secondsLeft = seconds + grace;
         scheduleTimer();
         Main.sendDebug("Initiated Timer");
         
@@ -55,7 +57,7 @@ public class Timer implements Runnable {
         }
 
         // Are we just starting?
-        if (secondsLeft == timerSeconds) {
+        if (secondsLeft == timerSeconds + graceSeconds) {
         	// Create Scoreboard Objective
         	manager = Bukkit.getScoreboardManager();
         	
@@ -82,25 +84,23 @@ public class Timer implements Runnable {
         }
         
         // Grace Messages
-        int time = Main.getPlugin().getConfig().getInt("timer.time");
-        int graceLeft = secondsLeft - time;
-        if (secondsLeft > time && secondsLeft <= time + 5) {
-        	for (Player nextPlayer : Run.allPlayers) {
-        		if (graceLeft > 0) {
-        			nextPlayer.sendMessage(Main.getConfigString(false, "lang.messages.grace-ending")
-        					.replaceAll("%time%", String.valueOf(graceLeft)));
-        		}
+        if (graceSeconds > 0) graceSeconds--;
+        if (graceSeconds <= 5 && Run.grace) {
+        	
+        	String message = Main.getConfigString(false, "lang.messages.grace-ending")
+					.replaceAll("%time%", String.valueOf(graceSeconds));
+        	if (graceSeconds <= 0) {
+        		Run.grace = false;
+        		message = Main.getConfigString(false, "lang.messages.grace-ended");
         	}
+        	
+        	for (Player nextPlayer : Run.allPlayers) {
+        		nextPlayer.sendMessage(message);
+        	}
+        	
         }
         
-        if (graceLeft < 1 && Run.grace == true) {
-        	Run.grace = false;
-	        for (Player nextPlayer : Run.allPlayers) {
-	        	nextPlayer.sendMessage(Main.getConfigString(false, "lang.messages.grace-ended"));
-	        }
-        }
-        
-        // Update Timer
+        // Update Scoreboard
     	forceUpdate();
     	
         secondsLeft--;
@@ -113,11 +113,7 @@ public class Timer implements Runnable {
     		return "not-running";
     	}
     	
-    	int maxTime = timerSeconds;
-    	if (action.equalsIgnoreCase("set")) {
-    		if (amount > maxTime) {
-    			return "time.over-time";
-    		}
+    	else if (action.equalsIgnoreCase("set")) {
     		if (amount < 1) {
     			return "time.under-time";
     		}
@@ -127,10 +123,7 @@ public class Timer implements Runnable {
 			return "time.success";
     	}
     	
-		if (action.equalsIgnoreCase("add")) {
-			if (secondsLeft + amount > maxTime) {
-    			return "time.over-time";
-    		}
+    	else if (action.equalsIgnoreCase("add")) {
     		if (secondsLeft + amount < 1) {
     			return "time.under-time";
     		}
@@ -140,10 +133,7 @@ public class Timer implements Runnable {
 			return "time.success";
 		}
 		
-		if (action.equalsIgnoreCase("remove")) {
-			if (secondsLeft - amount > maxTime) {
-    			return "time.over-time";
-    		}
+    	else if (action.equalsIgnoreCase("remove")) {
     		if (secondsLeft - amount < 1) {
     			return "time.under-time";
     		}
@@ -179,8 +169,9 @@ public class Timer implements Runnable {
     		else role = (Main.getConfigString(false, "titles.dead.role"));
     		
     		Scoreboard sb = nextPlayer.getScoreboard();
+    		if (sb == Bukkit.getScoreboardManager().getMainScoreboard()) continue;
     		Objective objective = sb.getObjective(DisplaySlot.SIDEBAR);
-    		objective.unregister();
+    		if (objective != null) objective.unregister();
     		
     		objective = sb.registerNewObjective(Main.getPlugin().getConfig().getString("timer.objective"), "dummy", "timer");
         	objective.setDisplaySlot(DisplaySlot.SIDEBAR);

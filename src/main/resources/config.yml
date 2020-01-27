@@ -47,6 +47,7 @@ maps:
           block: AIR
       
 enable-deputy: false
+kill-attacker-on-innocent-kill: false
 
 items:
   sword:
@@ -144,7 +145,7 @@ lang:
     gold: '&6You picked up %amount% gold!'
     update: '&aAn update is available! Current version: %current%, new version: %new%. Download it from %url%'
   command:
-    usage: '&cUsage: /mm <start|shuffle|stop|reload|kill|revive|role|tt|time>'
+    usage: '&cUsage: /mm <maps|create|delete|start|shuffle|loop|stop|reload|kill|revive|role|changerole|tt|time>'
     no-perm: '&cYou do not have permission to do that'
     nan: '&cThat is not a valid number'
     invalid: '&cInvalid Usage. Use /mm for help'
@@ -168,6 +169,7 @@ lang:
       usage: '&cUsage: /mm start <map> [player1],[player2],[player3]...'
       already-running: '&cA game is already running'
       shuffle-enabled: '&cShuffle is enabled! Disable it first'
+      loop-enabled: '&cLoop is enabled! Disable it first'
       invalid-map: '&c%map% does not exist'
       not-enough-players: '&cThere are not enough players to start a game on %map%'
       invalid-team: '&cThe team name is invalid. (Is it longer than 16 characters?)'
@@ -176,6 +178,10 @@ lang:
     shuffle:
       enabled: '&aShuffle is enabled'
       disabled: '&cShuffle has been disabled'
+    loop:
+      usage: '&cUsage: /mm loop <map> [player1],[player2],[player3]...'
+      enabled: '&aLoop is enabled'
+      disabled: '&cLoop has been disabled'
     kill:
       usage: '&cUsage: /mm kill <player>'
       success: '&aSuccessfully killed %player%'
@@ -187,6 +193,13 @@ lang:
     role:
       usage: '&cUsage: /mm role <player>'
       success: '&a%player% is %role%'
+    changerole:
+      usage: '&cUsage: /mm changerole <player> <role>'
+      dead: '&cThat player is dead'
+      not-role: '&cThat is not a valid role'
+      no-change: '&cThat player already is that role'
+      no-bystanders: '&cThere are no bystanders to replace that player with'
+      success: '&a%player% is now %role%'
     tt:
       usage: '&cUsage: /mm tt <player>'
       success: '&aThat player is the Murderer'
@@ -195,7 +208,6 @@ lang:
       usage: '&cUsage: /mm time <set|add|remove> <amount>'
       success: '&aSuccessfully changed the time to %time%'
       action: '&cThat is not a valid action, use set/add/remove'
-      over-time: '&cThat is over the maximum time'
       under-time: '&cThat would give the time a negative value'
     stop:
       usage: '&cUsage: /mm stop'
