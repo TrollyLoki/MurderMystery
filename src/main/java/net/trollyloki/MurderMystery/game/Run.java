@@ -1,7 +1,9 @@
 package net.trollyloki.MurderMystery.game;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -47,6 +49,7 @@ public class Run implements Listener {
 	public static Player deputy;
 	public static List<Player> bystanders = new ArrayList<Player>();
 	public static List<Player> allPlayers = new ArrayList<Player>();
+	public static Map<Player, Integer> innoKills = new HashMap<Player, Integer>();
 	public static ItemStack bow;
 	public static ItemStack sword;
 	public static String map;
@@ -253,8 +256,11 @@ public class Run implements Listener {
 	
 	private void killedinno(Player player) {
 		player.sendMessage(Main.getConfigString(false, "lang.messages.killed-inno"));
+		int kills = innoKills.get(player) + 1;
+		innoKills.put(player, kills);
 		
-		if (Main.getPlugin().getConfig().getBoolean("kill-attacker-on-innocent-kill")) {
+		int innocentKillsBeforeDetectiveKill = Main.getPlugin().getConfig().getInt("innocent-kills-before-detective-kill");
+		if (innocentKillsBeforeDetectiveKill > 0 && kills >= innocentKillsBeforeDetectiveKill) {
 			
 			kill(player, false);
 			
@@ -640,6 +646,7 @@ public class Run implements Listener {
 			deputy = null;
 			bystanders.clear();
 			allPlayers.clear();
+			innoKills.clear();
 			bow = null;
 			sword = null;
 			map = null;

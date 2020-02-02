@@ -205,6 +205,12 @@ public class Setup {
 		Run.deputy = deputy;
 		Run.bystanders = bystanders;
 		Run.allPlayers = allPlayers;
+		
+		Run.innoKills.clear();
+		for (Player nextPlayer : allPlayers) {
+			Run.innoKills.put(nextPlayer, 0);
+		}
+		
 		Run.bow = bow;
 		Run.sword = sword;
 		Run.map = map;

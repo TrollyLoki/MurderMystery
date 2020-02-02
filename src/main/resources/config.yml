@@ -47,7 +47,7 @@ maps:
           block: AIR
       
 enable-deputy: false
-kill-attacker-on-innocent-kill: false
+innocent-kills-before-detective-kill: 2
 
 items:
   sword:
