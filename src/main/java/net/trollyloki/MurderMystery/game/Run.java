@@ -34,6 +34,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.EulerAngle;
 
 import net.trollyloki.MurderMystery.Main;
@@ -43,6 +44,7 @@ public class Run implements Listener {
 	public static boolean gameRunning = false;
 	public static String autoRestartMap = null;
 	public static Boolean grace;
+	public static BukkitTask compassTask;
 	
 	public static Player murderer;
 	public static Player detective;
@@ -63,9 +65,26 @@ public class Run implements Listener {
 		
 		Main.sendDebug("Attempting to start timer...");
 		
-		Timer.CountdownTimer(plugin, plugin.getConfig().getInt("timer.time"), plugin.getConfig().getInt("timer.grace-period"));
+		Timer.CountdownTimer(plugin, plugin.getConfig().getInt("timer.time"), plugin.getConfig().getInt("timer.grace-period"), plugin.getConfig().getInt("timer.murder-compass"));
 		gameRunning = true;
 		grace = true;
+		
+		compassTask = Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), () -> {
+		
+		
+			double minDistance = Double.MAX_VALUE;
+			Player closestPlayer = null;
+			for (Player p : allPlayers) {
+				double distance = murderer.getLocation().distanceSquared(p.getLocation());
+				if (distance < minDistance) {
+					minDistance = distance;
+					closestPlayer = p;
+				}
+			}
+			murderer.setCompassTarget(closestPlayer.getLocation());
+		
+
+		}, 0, 0);
 		
 		Main.sendDebug("Set gameRunning and grace");
 		
@@ -581,6 +600,7 @@ public class Run implements Listener {
 			
 			Main.sendDebug("Attemping to end timer...");
 			Timer.endTimer();
+			compassTask.cancel();
 			
 			if (stand != null) {
 				stand.remove();

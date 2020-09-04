@@ -3,7 +3,9 @@ package net.trollyloki.MurderMystery.game;
 import java.util.List;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.*;
 import org.bukkit.scoreboard.Team.Option;
@@ -23,16 +25,18 @@ public class Timer implements Runnable {
     private static int timerSeconds;
     private static int graceSeconds;
     private static int secondsLeft;
+    private static int murderCompassSeconds;
 
     // Construct a timer, you could create multiple so for example if
     // you do not want these "actions"
-    public static void CountdownTimer(JavaPlugin plugin, int seconds, int grace) {
+    public static void CountdownTimer(JavaPlugin plugin, int seconds, int grace, int murderCompass) {
         // Initializing fields
         timerPlugin = plugin;
 
         timerSeconds = seconds;
         graceSeconds = grace;
         secondsLeft = seconds + grace;
+        murderCompassSeconds = murderCompass;
         scheduleTimer();
         Main.sendDebug("Initiated Timer");
         
@@ -103,9 +107,11 @@ public class Timer implements Runnable {
         // Update Scoreboard
     	forceUpdate();
     	
+    	if (secondsLeft == murderCompassSeconds) {
+    		Run.murderer.getInventory().setItem(8, new ItemStack(Material.COMPASS));
+    	}
+    	
         secondsLeft--;
-        
-        // 
     }
     
     public static String changeTime(String action, int amount) {
