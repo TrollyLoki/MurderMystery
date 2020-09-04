@@ -220,7 +220,7 @@ public class Run implements Listener {
 						
 						if (event.getCause() == DamageCause.ENTITY_ATTACK) {
 							
-							if (attacker == murderer && murderer.getInventory().getItemInMainHand().isSimilar(sword)
+							if (attacker == murderer && murderer.getPotionEffect(PotionEffectType.INVISIBILITY) == null && murderer.getInventory().getItemInMainHand().isSimilar(sword)
 									&& !player.hasPermission("mm.immune")) {
 								kill(player, false);
 							}
@@ -268,9 +268,9 @@ public class Run implements Listener {
 		else {
 			
 			PotionEffect effect = new PotionEffect(PotionEffectType.SLOW, 300, 255, true, false);
-			player.addPotionEffect(effect, true);
+			player.addPotionEffect(effect);
 			effect = new PotionEffect(PotionEffectType.BLINDNESS, 300, 255, true, false);
-			player.addPotionEffect(effect, true);
+			player.addPotionEffect(effect);
 			
 		}
 	}
@@ -458,7 +458,7 @@ public class Run implements Listener {
 				
 				player.getInventory().clear();
 				player.setGameMode(GameMode.ADVENTURE);
-				player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 99999, 255, true, false), true);
+				player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 99999, 255, true, false));
 				Location loc = Setup.getStartLocation(map);
 				if (loc == null) {
 					return "unknown-error";
@@ -491,13 +491,14 @@ public class Run implements Listener {
 	}
 
 	private static void detectiveKilled() {
+		@SuppressWarnings("deprecation")
 		boolean noGrav = detective.isOnGround();
 		Main.sendDebug("Detective died");
 		stand = detective.getLocation().getWorld().spawn(detective.getLocation().add(0, -1.6875, 0), ArmorStand.class);
 		stand.setGravity(false);
 		stand.setVisible(false);
 		stand.setRemoveWhenFarAway(false);
-		stand.setHelmet(bow);
+		stand.getEquipment().setHelmet(bow);
 		stand.setInvulnerable(true);
 		stand.setHeadPose(new EulerAngle(1.5708, 0.0, 0.0));
 		if (!noGrav)

@@ -51,18 +51,7 @@ public class CommandMM implements CommandExecutor, TabCompleter {
 						return false;
 					}
 
-					List<Player> players = new ArrayList<Player>();
-					if (args.length > 2) {
-						for (String name : args[2].split(",")) {
-							Player p = Bukkit.getPlayerExact(name);
-							if (p != null)
-								players.add(p);
-						}
-					} else {
-						players.addAll(Bukkit.getOnlinePlayers());
-					}
-
-					String result = Setup.startGame(args[1].toLowerCase(), players);
+					String result = Setup.startGame(args[1].toLowerCase(), parsePlayers(args, 2));
 
 					String name = args[1].toLowerCase();
 					if (result != "invalid-map")
@@ -86,19 +75,8 @@ public class CommandMM implements CommandExecutor, TabCompleter {
 					return false;
 				}
 
-				List<Player> players = new ArrayList<Player>();
-				if (args.length > 1) {
-					for (String name : args[1].split(",")) {
-						Player p = Bukkit.getPlayerExact(name);
-						if (p != null)
-							players.add(p);
-					}
-				} else {
-					players.addAll(Bukkit.getOnlinePlayers());
-				}
-
 				Run.autoRestartMap = "";
-				String[] result = Setup.autoStart(players, Run.autoRestartMap);
+				String[] result = Setup.autoStart(parsePlayers(args, 1), Run.autoRestartMap);
 
 				String name = null;
 				if (result[1] != "invalid-map")
@@ -125,19 +103,8 @@ public class CommandMM implements CommandExecutor, TabCompleter {
 					return false;
 				}
 
-				List<Player> players = new ArrayList<Player>();
-				if (args.length > 2) {
-					for (String name : args[2].split(",")) {
-						Player p = Bukkit.getPlayerExact(name);
-						if (p != null)
-							players.add(p);
-					}
-				} else {
-					players.addAll(Bukkit.getOnlinePlayers());
-				}
-
 				Run.autoRestartMap = args[1];
-				String[] result = Setup.autoStart(players, Run.autoRestartMap);
+				String[] result = Setup.autoStart(parsePlayers(args, 2), Run.autoRestartMap);
 
 				String name = null;
 				if (result[1] != "invalid-map")
@@ -750,6 +717,22 @@ public class CommandMM implements CommandExecutor, TabCompleter {
 		}
 		
 		if (!endsWithComma && nameMatches && !list.isEmpty()) list.add(arg + ",");
+	}
+	
+	private static List<Player> parsePlayers(String[] args, int index) {
+		List<Player> players = new ArrayList<Player>();
+		if (args.length > index) {
+			for (String name : args[index].split(",")) {
+				Player p = Bukkit.getPlayerExact(name);
+				if (p != null)
+					players.add(p);
+			}
+		} else {
+			List<Player> temp = new ArrayList<Player>();
+			temp.addAll(Bukkit.getOnlinePlayers());
+			players.addAll(temp);
+		}
+		return players;
 	}
 
 }

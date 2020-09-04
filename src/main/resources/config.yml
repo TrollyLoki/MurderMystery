@@ -52,23 +52,26 @@ innocent-kills-before-detective-kill: 2
 items:
   sword:
     name: '&4Murderer Sword'
+    type: IRON_SWORD
     lore:
     - 'Used to kill bystanders'
   bow:
     name: '&1Detective Bow'
+    type: BOW
     lore:
     - 'Used to kill the murderer'
   deputy-bow:
     name: '&9Deputy Bow'
+    type: BOW
     lore:
     - 'Used to kill the murderer'
   potion:
     enabled: false
     name: '&6Invis Potion'
+    type: POTION  # POTION / SPLASH_POTION / LINGERING_POTION
     lore:
     - 'Used to hide from the murderer'
     duration: 30
-    type: 'splash'
     color: '189,40,42'
     
 titles:

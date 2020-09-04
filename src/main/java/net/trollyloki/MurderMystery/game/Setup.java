@@ -120,7 +120,7 @@ public class Setup {
 		for (Player nextPlayer : allPlayers) {
 			nextPlayer.getInventory().clear();
 			nextPlayer.setGameMode(GameMode.ADVENTURE);
-			nextPlayer.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 99999, 255, true, false), true);
+			nextPlayer.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 99999, 255, true, false));
 			Location loc = getStartLocation(map);
 			if (loc == null) {
 				return "unknown-error";
@@ -132,12 +132,15 @@ public class Setup {
 		
 		Main.sendDebug("Prepared players for game");
 		
+		ItemStack potion = getInvisPotion();
+		
 		// Give murderer their sword
 		ItemStack sword = getMurdererSword();
 		
 		int swordSlot = 1;
 		if (murderer.getInventory().getHeldItemSlot() == 1) swordSlot = 2;
 		murderer.getInventory().setItem(swordSlot, sword);
+		murderer.getInventory().setItem(swordSlot + 1, potion);
 		
 		Main.sendDebug("Gave the murderer a sword");
 		
@@ -172,8 +175,6 @@ public class Setup {
 		}
 		
 		// Give bystanders their potion
-		ItemStack potion = getInvisPotion();
-		
 		if (potion != null) for (Player nextPlayer : bystanders) {
 			int potionSlot = 1;
 			if (nextPlayer.getInventory().getHeldItemSlot() == 1) potionSlot = 2;
@@ -227,7 +228,7 @@ public class Setup {
 	}
 	
 	public static ItemStack getMurdererSword() {
-		ItemStack sword = new ItemStack(Material.IRON_SWORD, 1);
+		ItemStack sword = new ItemStack(Material.valueOf(Main.getConfigString(false, "items.sword.type")), 1);
 		ItemMeta swordMeta = sword.getItemMeta();
 		swordMeta.setDisplayName(Main.getConfigString(false, "items.sword.name"));
 		swordMeta.setLore(Main.getConfigStringList(false, "items.sword.lore"));
@@ -237,7 +238,7 @@ public class Setup {
 	}
 	
 	public static ItemStack getDetectiveBow() {
-		ItemStack bow = new ItemStack(Material.BOW, 1);
+		ItemStack bow = new ItemStack(Material.valueOf(Main.getConfigString(false, "items.bow.type")), 1);
 		ItemMeta bowMeta = bow.getItemMeta();
 		bowMeta.setDisplayName(Main.getConfigString(false, "items.bow.name"));
 		bowMeta.setLore(Main.getConfigStringList(false, "items.bow.lore"));
@@ -248,7 +249,7 @@ public class Setup {
 	}
 	
 	public static ItemStack getDeputyBow() {
-		ItemStack dbow = new ItemStack(Material.BOW, 1);
+		ItemStack dbow = new ItemStack(Material.valueOf(Main.getConfigString(false, "items.deputy-bow.type")), 1);
 		ItemMeta dbowMeta = dbow.getItemMeta();
 		dbowMeta.setDisplayName(Main.getConfigString(false, "items.deputy-bow.name"));
 		dbowMeta.setLore(Main.getConfigStringList(false, "items.deputy-bow.lore"));
@@ -261,14 +262,12 @@ public class Setup {
 	public static ItemStack getInvisPotion() {
 		if (!Main.getPlugin().getConfig().getBoolean("items.potion.enabled")) return null;
 		
-		String type = Main.getConfigString(false, "items.potion.type");
-		Material potionType = Material.POTION;
-		if (type.equalsIgnoreCase("normal")) potionType = Material.POTION;
-		else if (type.equalsIgnoreCase("splash")) potionType = Material.SPLASH_POTION;
-		else if (type.equalsIgnoreCase("lingering")) potionType = Material.LINGERING_POTION;
-		else Main.getPlugin().getLogger().warning("Invalid potion type in config, defaulting to normal potion");
+		ItemStack potion = new ItemStack(Material.valueOf(Main.getConfigString(false, "items.potion.type")), 1);
+		if (!(potion.getItemMeta() instanceof PotionMeta)) {
+			Main.getPlugin().getLogger().warning("Invalid potion type in config, defaulting to normal potion");
+			potion = new ItemStack(Material.POTION, 1);
+		}
 		
-		ItemStack potion = new ItemStack(potionType, 1);
 		PotionMeta potionMeta = (PotionMeta) potion.getItemMeta();
 		potionMeta.setDisplayName(Main.getConfigString(false, "items.potion.name"));
 		potionMeta.setLore(Main.getConfigStringList(false, "items.potion.lore"));

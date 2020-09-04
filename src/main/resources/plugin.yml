@@ -2,7 +2,7 @@ name: ${project.artifactId}
 main: ${project.groupId}.Main
 version: ${project.version}
 authors: [TrollyLoki, OtakusAreNEET]
-api-version: 1.15
+api-version: 1.16
 
 commands:
   mm:
