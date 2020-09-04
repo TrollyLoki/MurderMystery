@@ -75,13 +75,20 @@ public class Run implements Listener {
 			double minDistance = Double.MAX_VALUE;
 			Player closestPlayer = null;
 			for (Player p : allPlayers) {
+				if (p == murderer || !(p == detective || p == deputy || bystanders.contains(p)))
+					continue;
+				if (p.hasPotionEffect(PotionEffectType.INVISIBILITY))
+					continue;
+				
 				double distance = murderer.getLocation().distanceSquared(p.getLocation());
 				if (distance < minDistance) {
 					minDistance = distance;
 					closestPlayer = p;
 				}
 			}
-			murderer.setCompassTarget(closestPlayer.getLocation());
+			
+			if (closestPlayer != null)
+				murderer.setCompassTarget(closestPlayer.getLocation());
 		
 
 		}, 0, 0);
