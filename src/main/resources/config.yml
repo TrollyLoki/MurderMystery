@@ -104,6 +104,7 @@ timer:
   team: 'MurderPluginTeam'
   objective: 'MurderPluginObj'
   time: 300
+  murder-compass: 150
   grace-period: 20
   restart-delay: 5
   scoreboard:
