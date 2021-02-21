@@ -222,7 +222,8 @@ public class Game extends BukkitRunnable {
         // Assign Roles
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
-        this.roles = new HashMap<>();
+        options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
+
         UUID murderer = Utils.removeRandomElement(options);
         this.roles.put(murderer, Role.MURDERER);
         UUID detective = Utils.removeRandomElement(options);
@@ -292,6 +293,7 @@ public class Game extends BukkitRunnable {
 
         if (this.droppedBow != null)
             droppedBow.remove();
+        this.droppedBow = null;
         this.running = false;
 
         for (UUID uuid : players) {
@@ -565,13 +567,17 @@ public class Game extends BukkitRunnable {
             return;
 
         kill(event.getPlayer());
+
+        int online = 0;
         for (UUID player : players) {
             if (plugin.getServer().getPlayer(player) != null)
-                return;
+                online++;
+        }
+        if (online < 2) {
+            plugin.getLogger().warning("This game is being released because less than 2 players are still online");
+            release();
         }
 
-        plugin.getLogger().warning("This game is being released because all players disconnected");
-        release();
     }
 
 }
