@@ -3,6 +3,8 @@ package net.trollyloki.murdermystery;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
 
 import java.util.List;
 
@@ -52,4 +54,15 @@ public class Utils {
         string += seconds;
         return string;
     }
+
+    /**
+     * Clears potion effects from the given player
+     *
+     * @param player Player
+     */
+    public static void clearPotionEffects(Player player) {
+        for (PotionEffect effect : player.getActivePotionEffects())
+            player.removePotionEffect(effect.getType());
+    }
+
 }

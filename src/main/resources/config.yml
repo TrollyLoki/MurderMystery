@@ -9,13 +9,58 @@ maps:
       yaw: 0.0
       pitch: 0.0
 
+roles:
+  murderer:
+    name: '&4Murderer'
+    goal: 'Kill all players'
+  detective:
+    name: '&9Detective'
+    goal: 'Kill the murderer'
+  bystander:
+    name: '&6Bystander'
+    goal: 'Survive the murderer'
+  dead:
+    name: '&cDead'
+    goal: 'Don''t get bored'
+
 scoreboard:
   title: '&4&lMurder Mystery'
-  roles:
-    murderer: '&4Murderer'
-    detective: '&9Detective'
-    bystander: '&6Bystander'
+  lines:
+    - '&7=-=-=-=-=-=-=-='
+    - ''
+    - '&aMap: &e%map%'
+    - ''
+    - '&aTime Left: &e%time%'
+    - ''
+    - '&aRole: &e%role%'
+    - ''
+    - '&aPlayers Alive: &e%alive%'
+    - ''
+    - '&aScore: &e%score%'
+    - ''
+    - '&7=-=-=-=-=-=-=-='
+
+titles:
+  start:
+    title: '%role%'
+    subtitle: 'Goal: %goal%'
+  end:
+    title: 'Game Over'
+    subtitles:
+      murderer_killed: 'The murderer was killed'
+      all_killed: 'The murderer killed everyone'
+      time_expired: 'The murderer ran out of time'
 
 time:
   total: 300
   grace: 15
+  grace_warning: '&6The grace period ends in %d seconds'
+  grace_ended: '&6The grace period has ended'
+
+items:
+  murderer:
+    sword_name: '&4Murderer Knife'
+  detective:
+    bow_name: '&9Detective Bow'
+    bow_dropped: '&9The bow has been dropped!'
+    bow_pickedup: '&9The bow has been picked up!'

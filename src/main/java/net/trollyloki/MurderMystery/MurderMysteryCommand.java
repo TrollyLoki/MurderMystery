@@ -36,10 +36,15 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
                     }
                     Map map = Map.load(config);
 
-                    Game game = new Game(plugin);
-                    sender.sendMessage(ChatColor.GREEN + "Starting game on " + map.getName() + "...");
-                    game.start(map);
-                    return true;
+                    try {
+                        Game game = new Game(plugin);
+                        sender.sendMessage(ChatColor.GREEN + "Starting game on " + map.getName() + "...");
+                        game.start(map);
+                        return true;
+                    } catch (IllegalArgumentException e) {
+                        sender.sendMessage(ChatColor.RED + e.getMessage());
+                        return false;
+                    }
 
                 }
 
