@@ -4,6 +4,8 @@ import net.trollyloki.murdermystery.Utils;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 
+import java.util.ArrayList;
+
 public class Map {
 
     private final String name;
@@ -46,6 +48,18 @@ public class Map {
      */
     public static Map load(ConfigurationSection config) {
         return new Map(config.getString("name"), Utils.loadLocation(config.getConfigurationSection("location")));
+    }
+
+    /**
+     * Loads a random map from a configuration section of maps
+     *
+     * @param mapConfig Configuration section
+     * @return Random map
+     */
+    public static Map loadRandom(ConfigurationSection mapConfig) {
+        ArrayList<String> maps = new ArrayList<>(mapConfig.getKeys(false));
+        String map = maps.get((int) (Math.random() * maps.size()));
+        return load(mapConfig.getConfigurationSection(map));
     }
 
 }

@@ -11,6 +11,7 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
@@ -28,30 +29,12 @@ public class Game extends BukkitRunnable {
     private final GameScoreboard scoreboard;
 
     /**
-     * Constructs a new game including all players
-     *
-     * @param plugin Plugin running this game
-     */
-    public Game(MurderMysteryPlugin plugin) {
-        this(plugin, new ArrayList<>(plugin.getServer().getOnlinePlayers()));
-    }
-
-    /**
-     * Constructs a new game including the given players
-     *
-     * @param plugin Plugin running this game
-     */
-    public Game(MurderMysteryPlugin plugin, Player... players) {
-        this(plugin, new ArrayList<>(Arrays.asList(players)));
-    }
-
-    /**
      * Constructs a new game including the given players
      *
      * @param plugin Plugin running this game
      * @throws IllegalArgumentException If less than 2 players are provided
      */
-    protected Game(MurderMysteryPlugin plugin, ArrayList<Player> players) {
+    public Game(MurderMysteryPlugin plugin, ArrayList<Player> players) {
         if (players.size() < 2)
             throw new IllegalArgumentException("A game must have at least 2 players");
 
@@ -175,7 +158,10 @@ public class Game extends BukkitRunnable {
      * @return Set of players
      */
     public Set<UUID> getAlivePlayers() {
-        return Collections.unmodifiableSet(roles.keySet());
+        if (roles == null)
+            return null;
+        else
+            return Collections.unmodifiableSet(roles.keySet());
     }
 
     /**
@@ -184,7 +170,10 @@ public class Game extends BukkitRunnable {
      * @return Number of players
      */
     public int getAlivePlayerCount() {
-        return roles.size();
+        if (roles == null)
+            return 0;
+        else
+            return roles.size();
     }
 
     /**
@@ -211,7 +200,7 @@ public class Game extends BukkitRunnable {
      * @return {@code true} if is the grace period, otherwise {@code false}
      */
     public boolean isGracePeriod() {
-        return graceTime > 0;
+        return graceTime >= 0;
     }
 
     /**
@@ -231,7 +220,7 @@ public class Game extends BukkitRunnable {
         this.graceTime = plugin.getConfig().getInt("time.grace");
 
         // Assign Roles
-        this.roles.clear();
+        this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
         this.roles = new HashMap<>();
         UUID murderer = Utils.removeRandomElement(options);
@@ -377,7 +366,7 @@ public class Game extends BukkitRunnable {
                 Player p = Bukkit.getPlayer(uuid);
                 if (p != null) {
 
-                    p.playSound(player.getLocation(), Sound.ENTITY_PLAYER_DEATH, SoundCategory.PLAYERS, 1, 1);
+                    p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_DEATH, SoundCategory.PLAYERS, 1, 1);
 
                 }
             }
@@ -569,6 +558,20 @@ public class Game extends BukkitRunnable {
         if (droppedBow != null && getRole(event.getPlayer()) == Role.BYSTANDER
                 && event.getPlayer().getLocation().distanceSquared(droppedBow.getLocation()) <= 1)
             pickupBow(event.getPlayer());
+    }
+
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (!isRunning())
+            return;
+
+        kill(event.getPlayer());
+        for (UUID player : players) {
+            if (plugin.getServer().getPlayer(player) != null)
+                return;
+        }
+
+        plugin.getLogger().warning("This game is being released because all players disconnected");
+        release();
     }
 
 }

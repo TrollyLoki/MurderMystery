@@ -1,6 +1,5 @@
 package net.trollyloki.murdermystery;
 
-import net.trollyloki.murdermystery.game.GameListener;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
