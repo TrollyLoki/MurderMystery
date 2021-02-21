@@ -208,6 +208,8 @@ public class Game extends BukkitRunnable {
                 ArrayList<String> lines = new ArrayList<>();
                 lines.add(SPACER);
                 lines.add("");
+                lines.add(ChatColor.GREEN + "Map: " + ChatColor.YELLOW + map.getName());
+                lines.add("");
                 lines.add(ChatColor.GREEN + "Time Left: " + ChatColor.YELLOW + time);
                 lines.add("");
                 String role = getRole(player).name().toLowerCase();
