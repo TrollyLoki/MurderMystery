@@ -24,6 +24,7 @@ public class Game extends BukkitRunnable {
 
     private final MurderMysteryPlugin plugin;
     private final ArrayList<UUID> players;
+    private final HashMap<UUID, Integer> scores;
     private final GameScoreboard scoreboard;
 
     /**
@@ -56,6 +57,7 @@ public class Game extends BukkitRunnable {
 
         this.plugin = plugin;
         this.players = new ArrayList<>();
+        this.scores = new HashMap<>();
         for (Player player : players)
             this.players.add(player.getUniqueId());
 
@@ -83,6 +85,28 @@ public class Game extends BukkitRunnable {
         return Collections.unmodifiableList(players);
     }
 
+    /**
+     * Gets the score of a player in this game
+     *
+     * @param player Player
+     * @return Score
+     */
+    public int getScore(UUID player) {
+        return scores.getOrDefault(player, 0);
+    }
+
+    /**
+     * Increments the score of a player in this game
+     *
+     * @param player Player
+     * @param amount Amount to increase the score by
+     * @return New score
+     */
+    public int increaseScore(UUID player, int amount) {
+        int score = getScore(player) + amount;
+        scores.put(player, score);
+        return score;
+    }
 
     /**
      * Releases this game
@@ -107,10 +131,10 @@ public class Game extends BukkitRunnable {
 
 
     private boolean running = false;
-    private Map map;
-    private HashMap<UUID, Role> roles;
-    private int time, graceTime;
-    private String formattedTime;
+    private Map map = null;
+    private HashMap<UUID, Role> roles = null;
+    private int time = 0, graceTime = 0;
+    private String formattedTime = "0:00";
 
     private ItemStack sword, bow;
     private ArmorStand droppedBow;
@@ -140,6 +164,8 @@ public class Game extends BukkitRunnable {
      * @return Role
      */
     public Role getRole(Player player) {
+        if (roles == null)
+            return null;
         return roles.getOrDefault(player.getUniqueId(), Role.DEAD);
     }
 
@@ -299,14 +325,21 @@ public class Game extends BukkitRunnable {
      * @return Converted string
      */
     public String convertPlaceholders(String string, Player player) {
-        String role = getRole(player).name().toLowerCase();
+        Map map = getMap();
+        Role role = getRole(player);
+        int alive = getAlivePlayerCount();
+        String time = getFormattedTimeLeft();
+        int score = getScore(player.getUniqueId());
+
         return string
-                .replaceAll("%map%", getMap().getName())
-                .replaceAll("%role%", plugin.getConfigString("roles." + role + ".name"))
-                .replaceAll("%goal%", plugin.getConfigString("roles." + role + ".goal"))
+                .replaceAll("%map%", map != null ? map.getName() : "None")
+                .replaceAll("%role%", role != null ?
+                        plugin.getConfigString("roles." + role.name().toLowerCase() + ".name") : "None")
+                .replaceAll("%goal%", role != null ?
+                        plugin.getConfigString("roles." + role.name().toLowerCase() + ".goal") : "None")
                 .replaceAll("%alive%", String.valueOf(getAlivePlayerCount()))
-                .replaceAll("%time%", getFormattedTimeLeft())
-                .replaceAll("%score%", String.valueOf(0));
+                .replaceAll("%time%", time)
+                .replaceAll("%score%", String.valueOf(score));
     }
 
     /**
@@ -433,6 +466,16 @@ public class Game extends BukkitRunnable {
                         plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
                         5, 100, 10);
 
+            }
+        }
+
+        if (reason == EndReason.ALL_KILLED) {
+            for (UUID player : roles.keySet())
+                increaseScore(player, 2);
+        } else {
+            for (java.util.Map.Entry<UUID, Role> entry : roles.entrySet()) {
+                if (entry.getValue() != Role.MURDERER)
+                    increaseScore(entry.getKey(), 1);
             }
         }
 
