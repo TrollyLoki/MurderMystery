@@ -1,5 +1,6 @@
 package net.trollyloki.murdermystery;
 
+import net.trollyloki.murdermystery.game.Game;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -12,6 +13,7 @@ public class MurderMysteryPlugin extends JavaPlugin {
 
         saveDefaultConfig();
 
+        getServer().getMessenger().registerOutgoingPluginChannel(this, Game.MUTE_CHANNEL);
         gameListener = new GameListener(this);
 
         getCommand("murdermystery").setExecutor(new MurderMysteryCommand(this));
