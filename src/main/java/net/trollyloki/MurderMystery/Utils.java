@@ -46,8 +46,11 @@ public class Utils {
         seconds = seconds % 60;
 
         String string = "";
-        if (hours > 0)
+        if (hours > 0) {
             string += hours + ":";
+            if (minutes < 10)
+                string += "0";
+        }
         string += minutes + ":";
         if (seconds < 10)
             string += "0";

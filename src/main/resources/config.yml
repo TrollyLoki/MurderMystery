@@ -15,7 +15,10 @@ roles:
     goal: 'Kill all players'
   detective:
     name: '&9Detective'
-    goal: 'Kill the murderer'
+    goal: 'Shoot the murderer'
+  underdog:
+    name: '&5Underdog'
+    goal: 'Snowball the murderer'
   bystander:
     name: '&6Bystander'
     goal: 'Survive the murderer'

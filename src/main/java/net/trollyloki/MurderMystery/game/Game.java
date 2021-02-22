@@ -228,6 +228,10 @@ public class Game extends BukkitRunnable {
         this.roles.put(murderer, Role.MURDERER);
         UUID detective = Utils.removeRandomElement(options);
         this.roles.put(detective, Role.DETECTIVE);
+        if (!options.isEmpty()) {
+            UUID underdog = Utils.removeRandomElement(options);
+            this.roles.put(underdog, Role.UNDERDOG);
+        }
         for (UUID bystander : options)
             this.roles.put(bystander, Role.BYSTANDER);
 
@@ -267,6 +271,10 @@ public class Game extends BukkitRunnable {
                     meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
                     bow.setItemMeta(meta);
                     player.getInventory().setItem(slot, bow);
+
+                } else if (role == Role.UNDERDOG) {
+
+                    player.getInventory().setItem(slot, new ItemStack(Material.SNOWBALL));
 
                 }
                 player.getInventory().setItem(9, new ItemStack(Material.ARROW));
@@ -557,8 +565,10 @@ public class Game extends BukkitRunnable {
         if (!isRunning())
             return;
 
-        if (droppedBow != null && getRole(event.getPlayer()) == Role.BYSTANDER
-                && event.getPlayer().getLocation().distanceSquared(droppedBow.getLocation()) <= 1)
+        Role role = getRole(event.getPlayer());
+        if (droppedBow != null && (role == Role.BYSTANDER
+                || (role == Role.UNDERDOG && !event.getPlayer().getInventory().contains(Material.SNOWBALL)))
+                && event.getPlayer().getLocation().distanceSquared(droppedBow.getLocation()) <= 2.25)
             pickupBow(event.getPlayer());
     }
 
