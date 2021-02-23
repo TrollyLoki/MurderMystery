@@ -59,6 +59,7 @@ time:
   grace: 15
   grace_warning: '&6The grace period ends in %d seconds'
   grace_ended: '&6The grace period has ended'
+  glow: 30
 
 items:
   murderer:

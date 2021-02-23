@@ -313,6 +313,7 @@ public class Game extends BukkitRunnable {
                 mute(player, false);
                 player.getInventory().clear();
                 player.removePotionEffect(PotionEffectType.SATURATION);
+                player.setGlowing(false);
 
             }
         }
@@ -513,6 +514,8 @@ public class Game extends BukkitRunnable {
                 graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
         }
 
+        boolean glow = time == plugin.getConfig().getInt("time.glow");
+
         for (UUID uuid : players) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
@@ -521,6 +524,12 @@ public class Game extends BukkitRunnable {
 
                 if (graceMessage != null)
                     player.sendMessage(graceMessage);
+
+                if (glow) {
+                    Role role = getRole(player);
+                    if (role != Role.DEAD && role != Role.MURDERER)
+                        player.setGlowing(true);
+                }
 
             }
         }
