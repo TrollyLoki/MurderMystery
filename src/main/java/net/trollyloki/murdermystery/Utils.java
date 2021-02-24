@@ -22,7 +22,13 @@ public class Utils {
         return list.remove(index);
     }
     
-    // Same thing, but doesn't remove the player that was selected.
+    /**
+     * Returns a random element from the given list
+     *
+     * @param list List
+     * @param <T> Type of object
+     * @return Random element
+     */
     public static <T> T getRandomElement(List<T> list) {
     	int index = (int) (Math.random() * list.size());
     	return list.get(index);
