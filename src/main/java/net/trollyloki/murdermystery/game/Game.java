@@ -229,10 +229,9 @@ public class Game extends BukkitRunnable {
         // Be sure to reset the hotpotato value between games!
         this.hotPotatoMode = false;
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
-        if (ThreadLocalRandom.current().nextInt(1, 100 - plugin.getConfig().getInt("chance.hotpotato")) == 1) {
-        	this.hotPotatoMode = true;
+        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100) {
+        	hotPotatoMode = true;
         }
-
         // Assign Roles
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
@@ -415,6 +414,10 @@ public class Game extends BukkitRunnable {
                 end(EndReason.MURDERER_KILLED);
             else if (role == Role.DETECTIVE)
                 dropBow(player.getLocation());
+            
+            if (player.getUniqueId().equals(potatoVictim)) {
+            	potatoVictim = null;
+            }
 
             if (getAlivePlayerCount() <= 1)
                 end(EndReason.ALL_KILLED);
@@ -538,9 +541,12 @@ public class Game extends BukkitRunnable {
                 graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
         }
         // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
-        if (isRunning() && hotPotatoMode && this.potatoTime >= 0) {
+        // Added setting potatoVictim to null if the player died in the kill method
+        if (isRunning() && hotPotatoMode) {
         	if (this.potatoTime == 0)
+        		if (this.potatoVictim != null) {
         		kill(Bukkit.getPlayer(potatoVictim));
+        	}
         }
 
         boolean glow = time == plugin.getConfig().getInt("time.glow");
