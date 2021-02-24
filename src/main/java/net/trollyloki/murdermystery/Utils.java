@@ -21,6 +21,18 @@ public class Utils {
         int index = (int) (Math.random() * list.size());
         return list.remove(index);
     }
+    
+    /**
+     * Returns a random element from the given list
+     *
+     * @param list List
+     * @param <T> Type of object
+     * @return Random element
+     */
+    public static <T> T getRandomElement(List<T> list) {
+    	int index = (int) (Math.random() * list.size());
+    	return list.get(index);
+    }
 
     /**
      * Loads a location from a configuration section
