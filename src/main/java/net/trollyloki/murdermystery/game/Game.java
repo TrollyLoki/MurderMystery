@@ -121,9 +121,11 @@ public class Game extends BukkitRunnable {
     private HashMap<UUID, Role> roles = null;
     private int time = 0, graceTime = 0, potatoTime = 0;
     private String formattedTime = "0:00";
-    private boolean hotpotato = false;
+    // Boolean that decides whether hotpotato mode is on or off
+    private boolean hotpotatomode = false;
     private ItemStack sword, bow, potato;
-    private UUID potatoVictim;
+    // Stores the UUID of the player that the potato will kill eventually - this will change several times!
+    private UUID potatoVictim = null;
     private ArmorStand droppedBow;
 
     /**
@@ -222,17 +224,20 @@ public class Game extends BukkitRunnable {
         this.map = map;
         this.time = plugin.getConfig().getInt("time.total");
         this.graceTime = plugin.getConfig().getInt("time.grace");
+        // Stores the time until the potato kills its host. Acts like the grace period timer.
         this.potatoTime = plugin.getConfig().getInt("time.potato");
-        this.hotpotato = false;
+        // Be sure to reset the hotpotato value between games!
+        this.hotpotatomode = false;
+        // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
         if (ThreadLocalRandom.current().nextInt(1, 100 - plugin.getConfig().getInt("chance.hotpotato")) == 1) {
-        	this.hotpotato = true;
+        	this.hotpotatomode = true;
         }
 
         // Assign Roles
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
-        if (hotpotato == true) {
+        if (hotpotatomode == true) {
         	this.potatoVictim = Utils.getRandomElement(options);
         }
         UUID murderer = Utils.removeRandomElement(options);
@@ -288,14 +293,14 @@ public class Game extends BukkitRunnable {
                     player.getInventory().setItem(slot, new ItemStack(Material.SNOWBALL));
 
                 }
-                
-                if (hotpotato && player.getUniqueId().equals(potatoVictim)) {
+                // The Hot Potato isn't really a role. It's just a random item.
+                if (hotpotatomode && player.getUniqueId().equals(potatoVictim)) {
                 	potato = new ItemStack(Material.BAKED_POTATO);
                 	ItemMeta meta = potato.getItemMeta();
                 	meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
                 	meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_name")));
                 	potato.setItemMeta(meta);
-                	// Just using addItem..
+                	// Just using addItem.. not setItem, sorry
                 	player.getInventory().addItem(potato);
                 }
                 player.getInventory().setItem(9, new ItemStack(Material.ARROW));
@@ -532,7 +537,8 @@ public class Game extends BukkitRunnable {
             else
                 graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
         }
-        if (isRunning() && this.potatoTime >= 0) {
+        // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
+        if (isRunning() && hotpotatomode && this.potatoTime >= 0) {
         	if (this.potatoTime == 0)
         		kill(Bukkit.getPlayer(potatoVictim));
         }
@@ -605,10 +611,12 @@ public class Game extends BukkitRunnable {
                         kill(player);
 
                 }
-                
+                // Handling for if none of the above items were used to damage
                 else if (player.getInventory().getItemInMainHand().getType() == Material.BAKED_POTATO) {
                 	player.getInventory().remove(Material.BAKED_POTATO);
                 	((Player) event.getEntity()).getInventory().addItem(potato);
+                	// haha funny sound
+                	((Player) event.getEntity()).getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
                 	// new potato victim
                 	potatoVictim = ((Player) event.getEntity()).getUniqueId();
                 	
