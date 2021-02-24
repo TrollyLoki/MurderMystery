@@ -20,6 +20,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.EulerAngle;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Game extends BukkitRunnable {
 
@@ -118,10 +119,11 @@ public class Game extends BukkitRunnable {
     private boolean running = false;
     private Map map = null;
     private HashMap<UUID, Role> roles = null;
-    private int time = 0, graceTime = 0;
+    private int time = 0, graceTime = 0, potatoTime = 0;
     private String formattedTime = "0:00";
-
-    private ItemStack sword, bow;
+    private boolean hotpotato = false;
+    private ItemStack sword, bow, potato;
+    private UUID potatoVictim;
     private ArmorStand droppedBow;
 
     /**
@@ -220,12 +222,19 @@ public class Game extends BukkitRunnable {
         this.map = map;
         this.time = plugin.getConfig().getInt("time.total");
         this.graceTime = plugin.getConfig().getInt("time.grace");
+        this.potatoTime = plugin.getConfig().getInt("time.potato");
+        this.hotpotato = false;
+        if (ThreadLocalRandom.current().nextInt(1, 100 - plugin.getConfig().getInt("chance.hotpotato")) == 1) {
+        	this.hotpotato = true;
+        }
 
         // Assign Roles
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
-
+        if (hotpotato == true) {
+        	this.potatoVictim = Utils.getRandomElement(options);
+        }
         UUID murderer = Utils.removeRandomElement(options);
         this.roles.put(murderer, Role.MURDERER);
         UUID detective = Utils.removeRandomElement(options);
@@ -278,6 +287,16 @@ public class Game extends BukkitRunnable {
 
                     player.getInventory().setItem(slot, new ItemStack(Material.SNOWBALL));
 
+                }
+                
+                if (hotpotato && player.getUniqueId().equals(potatoVictim)) {
+                	potato = new ItemStack(Material.BAKED_POTATO);
+                	ItemMeta meta = potato.getItemMeta();
+                	meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
+                	meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_name")));
+                	potato.setItemMeta(meta);
+                	// Just using addItem..
+                	player.getInventory().addItem(potato);
                 }
                 player.getInventory().setItem(9, new ItemStack(Material.ARROW));
 
@@ -513,8 +532,13 @@ public class Game extends BukkitRunnable {
             else
                 graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
         }
+        if (isRunning() && this.potatoTime >= 0) {
+        	if (this.potatoTime == 0)
+        		kill(Bukkit.getPlayer(potatoVictim));
+        }
 
         boolean glow = time == plugin.getConfig().getInt("time.glow");
+        
 
         for (UUID uuid : players) {
             Player player = Bukkit.getPlayer(uuid);
@@ -530,13 +554,15 @@ public class Game extends BukkitRunnable {
                     if (role != Role.DEAD && role != Role.MURDERER)
                         player.setGlowing(true);
                 }
-
             }
         }
 
         if (isRunning()) {
             if (this.graceTime >= 0)
                 this.graceTime--;
+            
+            if (this.potatoTime >= 0)
+            	this.potatoTime--;
 
             if (this.time <= 0)
                 end(EndReason.TIME_EXPIRED);
@@ -578,6 +604,14 @@ public class Game extends BukkitRunnable {
                     if (role != Role.MURDERER && getRole(player) != Role.MURDERER) // kill player if they killed an innocent
                         kill(player);
 
+                }
+                
+                else if (player.getInventory().getItemInMainHand().getType() == Material.BAKED_POTATO) {
+                	player.getInventory().remove(Material.BAKED_POTATO);
+                	((Player) event.getEntity()).getInventory().addItem(potato);
+                	// new potato victim
+                	potatoVictim = ((Player) event.getEntity()).getUniqueId();
+                	
                 }
 
             }

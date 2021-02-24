@@ -60,6 +60,7 @@ time:
   grace_warning: '&6The grace period ends in %d seconds'
   grace_ended: '&6The grace period has ended'
   glow: 30
+  potato: 60
 
 items:
   murderer:
@@ -68,3 +69,9 @@ items:
     bow_name: '&9Detective Bow'
     bow_dropped: '&9The bow has been dropped!'
     bow_pickedup: '&9The bow has been picked up!'
+  potato:
+    potato_name: '&5Hot Potato'
+    potato_lore: '&7YAHOOHOOHOTHOT'
+
+chance:
+  hotpotato: 1

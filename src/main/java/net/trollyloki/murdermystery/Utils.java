@@ -21,6 +21,12 @@ public class Utils {
         int index = (int) (Math.random() * list.size());
         return list.remove(index);
     }
+    
+    // Same thing, but doesn't remove the player that was selected.
+    public static <T> T getRandomElement(List<T> list) {
+    	int index = (int) (Math.random() * list.size());
+    	return list.get(index);
+    }
 
     /**
      * Loads a location from a configuration section
