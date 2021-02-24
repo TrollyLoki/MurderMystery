@@ -29,7 +29,17 @@ public class Game extends BukkitRunnable {
     private final ArrayList<UUID> players;
     private final HashMap<UUID, Integer> scores;
     private final GameScoreboard scoreboard;
-
+    private boolean running = false;
+    private Map map = null;
+    private HashMap<UUID, Role> roles = null;
+    private int time = 0, graceTime = 0, potatoTime = 0;
+    private String formattedTime = "0:00";
+    // Boolean that decides whether hotpotato mode is on or off
+    private boolean hotPotatoMode = false;
+    private ItemStack sword, bow, potato;
+    // Stores the UUID of the player that the potato will kill eventually - this will change several times!
+    private UUID potatoVictim = null;
+    private ArmorStand droppedBow;
     /**
      * Constructs a new game including the given players
      *
@@ -112,20 +122,6 @@ public class Game extends BukkitRunnable {
         }
 
     }
-
-
-
-    private boolean running = false;
-    private Map map = null;
-    private HashMap<UUID, Role> roles = null;
-    private int time = 0, graceTime = 0, potatoTime = 0;
-    private String formattedTime = "0:00";
-    // Boolean that decides whether hotpotato mode is on or off
-    private boolean hotPotatoMode = false;
-    private ItemStack sword, bow, potato;
-    // Stores the UUID of the player that the potato will kill eventually - this will change several times!
-    private UUID potatoVictim = null;
-    private ArmorStand droppedBow;
 
     /**
      * Checks if this game is currently running
@@ -229,14 +225,14 @@ public class Game extends BukkitRunnable {
         this.hotPotatoMode = false;
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
         if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100) {
-        	hotPotatoMode = true;
+            hotPotatoMode = true;
         }
         // Assign Roles
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
         if (hotPotatoMode == true) {
-        	this.potatoVictim = Utils.getRandomElement(options);
+            this.potatoVictim = Utils.getRandomElement(options);
         }
         UUID murderer = Utils.removeRandomElement(options);
         this.roles.put(murderer, Role.MURDERER);
@@ -293,13 +289,15 @@ public class Game extends BukkitRunnable {
                 }
                 // The Hot Potato isn't really a role. It's just a random item.
                 if (hotPotatoMode && player.getUniqueId().equals(potatoVictim)) {
-                	potato = new ItemStack(Material.BAKED_POTATO);
-                	ItemMeta meta = potato.getItemMeta();
-                	meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
-                	meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_lore")));
-                	potato.setItemMeta(meta);
-                	// Just using addItem.. not setItem, sorry
-                	player.getInventory().addItem(potato);
+
+                    potato = new ItemStack(Material.BAKED_POTATO);
+                    ItemMeta meta = potato.getItemMeta();
+                    meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
+                    meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_lore")));
+                    potato.setItemMeta(meta);
+                    // Just using addItem.. not setItem, sorry
+                    player.getInventory().addItem(potato);
+
                 }
                 player.getInventory().setItem(9, new ItemStack(Material.ARROW));
 
@@ -362,7 +360,7 @@ public class Game extends BukkitRunnable {
                         plugin.getConfigString("roles." + role.name().toLowerCase() + ".name") : "None")
                 .replaceAll("%goal%", role != null ?
                         plugin.getConfigString("roles." + role.name().toLowerCase() + ".goal") : "None")
-                .replaceAll("%alive%", String.valueOf(getAlivePlayerCount()))
+                .replaceAll("%alive%", String.valueOf(alive))
                 .replaceAll("%time%", time)
                 .replaceAll("%score%", String.valueOf(score));
     }
@@ -413,9 +411,9 @@ public class Game extends BukkitRunnable {
                 end(EndReason.MURDERER_KILLED);
             else if (role == Role.DETECTIVE)
                 dropBow(player.getLocation());
-            
+
             if (player.getUniqueId().equals(potatoVictim)) {
-            	potatoVictim = null;
+                potatoVictim = null;
             }
 
             if (getAlivePlayerCount() <= 1)
@@ -541,15 +539,15 @@ public class Game extends BukkitRunnable {
         }
         // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
         // Added setting potatoVictim to null if the player died in the kill method
-        if (isRunning() && hotPotatoMode) {
-        	if (this.potatoTime == 0)
-        		if (this.potatoVictim != null) {
-        		kill(Bukkit.getPlayer(potatoVictim));
-        	}
+        if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
+            if (this.potatoVictim != null) {
+                Player victim = Bukkit.getPlayer(potatoVictim);
+                if (victim != null)
+                    kill(victim);
+            }
         }
 
         boolean glow = time == plugin.getConfig().getInt("time.glow");
-        
 
         for (UUID uuid : players) {
             Player player = Bukkit.getPlayer(uuid);
@@ -571,9 +569,9 @@ public class Game extends BukkitRunnable {
         if (isRunning()) {
             if (this.graceTime >= 0)
                 this.graceTime--;
-            
+
             if (this.potatoTime >= 0)
-            	this.potatoTime--;
+                this.potatoTime--;
 
             if (this.time <= 0)
                 end(EndReason.TIME_EXPIRED);
@@ -618,13 +616,13 @@ public class Game extends BukkitRunnable {
                 }
                 // Handling for if none of the above items were used to damage
                 else if (player.getInventory().getItemInMainHand().getType() == Material.BAKED_POTATO) {
-                	player.getInventory().remove(Material.BAKED_POTATO);
-                	((Player) event.getEntity()).getInventory().addItem(potato);
-                	// haha funny sound
-                	((Player) event.getEntity()).getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
-                	// new potato victim
-                	potatoVictim = ((Player) event.getEntity()).getUniqueId();
-                	
+                    player.getInventory().remove(Material.BAKED_POTATO);
+                    ((Player) event.getEntity()).getInventory().addItem(potato);
+                    // haha funny sound
+                    event.getEntity().getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
+                    // new potato victim
+                    potatoVictim = event.getEntity().getUniqueId();
+
                 }
 
             }
