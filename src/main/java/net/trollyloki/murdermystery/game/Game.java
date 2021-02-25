@@ -648,7 +648,7 @@ public class Game extends BukkitRunnable {
 
         int online = 0;
         for (UUID player : players) {
-            if (plugin.getServer().getPlayer(player) != null)
+            if (!player.equals(event.getPlayer().getUniqueId()) && plugin.getServer().getPlayer(player) != null)
                 online++;
         }
         if (online < 2) {
