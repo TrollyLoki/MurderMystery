@@ -224,7 +224,7 @@ public class Game extends BukkitRunnable {
         // Be sure to reset the hotpotato value between games!
         this.hotPotatoMode = false;
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
-        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100) {
+        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100.0) {
             hotPotatoMode = true;
         }
         // Assign Roles
@@ -447,6 +447,7 @@ public class Game extends BukkitRunnable {
 
         droppedBow = location.getWorld().spawn(location, ArmorStand.class);
         droppedBow.setInvisible(true);
+        droppedBow.setInvulnerable(true);
         droppedBow.setRightArmPose(new EulerAngle(-1.48353, 0, -0.174533));
         droppedBow.getEquipment().setItemInMainHand(bow, true);
 
