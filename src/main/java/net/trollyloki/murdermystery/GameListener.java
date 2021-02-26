@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.*;
@@ -121,6 +122,15 @@ public class GameListener implements Listener {
         else if (event.getEntity() instanceof Hanging) {
             if (isInGame(event.getDamager()))
                 event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onEntityShootBow(EntityShootBowEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Game game = getGame(((Player) event.getEntity()));
+            if (game != null)
+                game.onEntityShootBow(event);
         }
     }
 

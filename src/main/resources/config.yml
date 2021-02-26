@@ -60,6 +60,7 @@ time:
   grace_warning: '&6The grace period ends in %d seconds'
   grace_ended: '&6The grace period has ended'
   glow: 30
+  bow-cooldown: 3
   potato: 60
 
 items:
