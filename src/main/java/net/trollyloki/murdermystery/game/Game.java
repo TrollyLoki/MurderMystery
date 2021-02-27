@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -45,6 +46,7 @@ public class Game extends BukkitRunnable {
     private ArmorStand droppedBow;
     private boolean potatoCooldown = false;
     private Firework firework = null;
+    private HashMap<UUID, Integer> arrowTimes;
     /**
      * Constructs a new game including the given players
      *
@@ -224,6 +226,7 @@ public class Game extends BukkitRunnable {
         this.map = map;
         this.time = plugin.getConfig().getInt("time.total");
         this.graceTime = plugin.getConfig().getInt("time.grace");
+        this.arrowTimes = new HashMap<>();
         // Stores the time until the potato kills its host. Acts like the grace period timer.
         this.potatoTime = plugin.getConfig().getInt("time.potato");
         // Be sure to reset the hotpotato value between games!
@@ -283,7 +286,7 @@ public class Game extends BukkitRunnable {
                     ItemMeta meta = bow.getItemMeta();
                     meta.setDisplayName(plugin.getConfigString("items.detective.bow_name"));
                     meta.setUnbreakable(true);
-                    meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+                    // meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
                     bow.setItemMeta(meta);
                     player.getInventory().setItem(slot, bow);
 
@@ -329,6 +332,7 @@ public class Game extends BukkitRunnable {
         if (this.droppedBow != null)
             droppedBow.remove();
         this.droppedBow = null;
+        this.arrowTimes = null;
         this.running = false;
 
         for (UUID uuid : players) {
@@ -575,6 +579,12 @@ public class Game extends BukkitRunnable {
 
                 scoreboard.update(player, convertPlaceholders(lines, player));
 
+                Integer arrowTime = arrowTimes.get(uuid);
+                if (arrowTime != null && arrowTime >= this.time) {
+                    arrowTimes.remove(uuid);
+                    player.getInventory().setItem(9, new ItemStack(Material.ARROW));
+                }
+
                 if (graceMessage != null)
                     player.sendMessage(graceMessage);
                 
@@ -664,6 +674,14 @@ public class Game extends BukkitRunnable {
 
         }
 
+    }
+
+    public void onEntityShootBow(EntityShootBowEvent event) {
+        if (!isRunning())
+            return;
+
+        int arrowTime = this.time - plugin.getConfig().getInt("time.bow-cooldown");
+        arrowTimes.put(event.getEntity().getUniqueId(), arrowTime);
     }
 
     public void onPlayerMove(PlayerMoveEvent event) {

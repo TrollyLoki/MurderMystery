@@ -62,6 +62,7 @@ time:
   potato_warning: '&cThe Hot Potato will BURN in %d seconds'
   potato_burned: '&c&l%s was burnt to a crisp by a hot potato!'
   glow: 30
+  bow-cooldown: 3
   potato: 60
   potato_countdown: 10
 
