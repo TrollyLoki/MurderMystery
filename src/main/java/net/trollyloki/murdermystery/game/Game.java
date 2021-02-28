@@ -6,6 +6,8 @@ import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -14,6 +16,7 @@ import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -41,6 +44,7 @@ public class Game extends BukkitRunnable {
     // Stores the UUID of the player that the potato will kill eventually - this will change several times!
     private UUID potatoVictim = null;
     private ArmorStand droppedBow;
+    private boolean potatoCooldown = false;
     private HashMap<UUID, Integer> arrowTimes;
     /**
      * Constructs a new game including the given players
@@ -549,13 +553,28 @@ public class Game extends BukkitRunnable {
                 else
                     graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
             }
+            
+            String potatoMessage = null;
+            if (isRunning() && hotPotatoMode && this.potatoTime >= 0) {
+        	      if (this.potatoTime == 0)
+        		        potatoMessage = String.format(plugin.getConfigString("time.potato_burned"), Bukkit.getPlayer(potatoVictim).getName());
+        	      // Else if the potato time is <= to the countdown time - countdown time is so it doesn't spam chat too much
+        	      else if (this.potatoTime <= plugin.getConfig().getInt("time.potato_countdown"))
+        		        potatoMessage = String.format(plugin.getConfigString("time.potato_warning"), this.potatoTime);
+            }
+          
             // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
             // Added setting potatoVictim to null if the player died in the kill method
-            if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
-                if (this.potatoVictim != null) {
-                    Player victim = Bukkit.getPlayer(potatoVictim);
-                    if (victim != null)
-                        kill(victim);
+            if (isRunning() && hotPotatoMode && this.potatoTime == 0 && this.potatoVictim != null) {
+                Player victim = Bukkit.getPlayer(potatoVictim);
+                if (victim != null) {
+                    // bam, fireworks
+                    Firework firework = victim.getWorld().spawn(victim.getLocation(), Firework.class);
+                    FireworkMeta fireMeta = firework.getFireworkMeta();
+                    fireMeta.addEffect(FireworkEffect.builder().withColor(Color.RED).flicker(true).build());
+                    firework.setFireworkMeta(fireMeta);
+            		firework.detonate();
+                    kill(victim);
                 }
             }
 
@@ -569,6 +588,8 @@ public class Game extends BukkitRunnable {
 
                     if (graceMessage != null)
                         player.sendMessage(graceMessage);
+                    if (potatoMessage != null)
+                        player.sendMessage(potatoMessage);
 
                     if (glow) {
                         Role role = getRole(player);
@@ -655,13 +676,25 @@ public class Game extends BukkitRunnable {
                 }
                 // Handling for if none of the above items were used to damage
                 else if (player.getInventory().getItemInMainHand().getType() == Material.BAKED_POTATO) {
-                    player.getInventory().remove(Material.BAKED_POTATO);
-                    ((Player) event.getEntity()).getInventory().addItem(potato);
-                    // haha funny sound
-                    event.getEntity().getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
-                    // new potato victim
-                    potatoVictim = event.getEntity().getUniqueId();
-
+                	if (!potatoCooldown) {
+                		player.getInventory().remove(Material.BAKED_POTATO);
+                		((Player) event.getEntity()).getInventory().addItem(potato);
+                		// haha funny sound
+                		event.getEntity().getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
+                		// new potato victim
+                		potatoVictim = event.getEntity().getUniqueId();
+                		// particles!!!!
+                		event.getEntity().getWorld().spawnParticle(Particle.VILLAGER_ANGRY, event.getEntity().getLocation().add(0, 1, 0), 3, 0.3, 0, 0.3);
+                		// set potato cooldown and set bukkitrunnable to remove it in a second
+                		potatoCooldown = true;
+                		new BukkitRunnable() {
+							@Override
+							public void run() {
+								potatoCooldown = false;
+								
+							}
+                		}.runTaskLater(plugin, 20);
+                	}
                 }
 
             }

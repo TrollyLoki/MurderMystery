@@ -59,9 +59,12 @@ time:
   grace: 15
   grace_warning: '&6The grace period ends in %d seconds'
   grace_ended: '&6The grace period has ended'
+  potato_warning: '&cThe Hot Potato will BURN in %d seconds'
+  potato_burned: '&c&l%s was burnt to a crisp by a hot potato!'
   glow: 30
   bow-cooldown: 3
   potato: 60
+  potato_countdown: 10
 
 items:
   murderer:
