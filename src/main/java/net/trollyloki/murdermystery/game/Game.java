@@ -555,26 +555,23 @@ public class Game extends BukkitRunnable {
             }
             
             String potatoMessage = null;
-            if (isRunning() && hotPotatoMode && this.potatoTime >= 0) {
-        	      if (this.potatoTime == 0)
-        		        potatoMessage = String.format(plugin.getConfigString("time.potato_burned"), Bukkit.getPlayer(potatoVictim).getName());
-        	      // Else if the potato time is <= to the countdown time - countdown time is so it doesn't spam chat too much
-        	      else if (this.potatoTime <= plugin.getConfig().getInt("time.potato_countdown"))
-        		        potatoMessage = String.format(plugin.getConfigString("time.potato_warning"), this.potatoTime);
-            }
-          
             // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
             // Added setting potatoVictim to null if the player died in the kill method
-            if (isRunning() && hotPotatoMode && this.potatoTime == 0 && this.potatoVictim != null) {
+            if (isRunning() && hotPotatoMode && this.potatoTime >= 0
+                    && this.potatoTime <= plugin.getConfig().getInt("time.potato_countdown")
+                    && this.potatoVictim != null) {
                 Player victim = Bukkit.getPlayer(potatoVictim);
-                if (victim != null) {
+                if (this.potatoTime == 0) {
+                    potatoMessage = String.format(plugin.getConfigString("time.potato_burned"), victim.getName());
                     // bam, fireworks
                     Firework firework = victim.getWorld().spawn(victim.getLocation(), Firework.class);
                     FireworkMeta fireMeta = firework.getFireworkMeta();
                     fireMeta.addEffect(FireworkEffect.builder().withColor(Color.RED).flicker(true).build());
                     firework.setFireworkMeta(fireMeta);
-            		firework.detonate();
+                    firework.detonate();
                     kill(victim);
+                } else {
+                    potatoMessage = String.format(plugin.getConfigString("time.potato_warning"), this.potatoTime);
                 }
             }
 
