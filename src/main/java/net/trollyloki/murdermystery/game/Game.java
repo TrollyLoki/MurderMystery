@@ -45,7 +45,6 @@ public class Game extends BukkitRunnable {
     private UUID potatoVictim = null;
     private ArmorStand droppedBow;
     private boolean potatoCooldown = false;
-    private Firework firework = null;
     private HashMap<UUID, Integer> arrowTimes;
     /**
      * Constructs a new game including the given players
@@ -561,13 +560,14 @@ public class Game extends BukkitRunnable {
         if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
             if (this.potatoVictim != null) {
                 Player victim = Bukkit.getPlayer(potatoVictim);
-                if (victim != null)
+                if (victim != null) {
                 	// bam, fireworks
-                	firework = (Firework) victim.getWorld().spawnEntity(victim.getLocation(), EntityType.FIREWORK);
+                	Firework firework = victim.getWorld().spawn(victim.getLocation(), Firework.class);
             		FireworkMeta fireMeta = firework.getFireworkMeta();
             		fireMeta.addEffect(FireworkEffect.builder().withColor(Color.RED).flicker(true).build());
             		firework.detonate();
                     kill(victim);
+                }
             }
         }
 
