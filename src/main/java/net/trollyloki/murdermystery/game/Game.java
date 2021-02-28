@@ -60,7 +60,7 @@ public class Game extends BukkitRunnable {
 
         this.scoreboard = new GameScoreboard(this);
         plugin.getGameListener().registerGame(this);
-        runTaskTimer(plugin, 0, 20);
+        runTaskTimer(plugin, 0, 0);
 
     }
 
@@ -254,6 +254,7 @@ public class Game extends BukkitRunnable {
 
                 // Initial setup
                 player.teleport(map.getLocation());
+                player.setLevel(0);
                 player.getInventory().clear();
                 Utils.clearPotionEffects(player);
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
@@ -335,6 +336,7 @@ public class Game extends BukkitRunnable {
             if (player != null) {
 
                 mute(player, false);
+                player.setLevel(0);
                 player.getInventory().clear();
                 player.removePotionEffect(PotionEffectType.SATURATION);
                 player.setGlowing(false);
@@ -526,69 +528,95 @@ public class Game extends BukkitRunnable {
 
     }
 
+    private int tick = 0;
+
     @Override
     public void run() {
 
-        this.formattedTime = Utils.formatTime(this.time);
-        List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
-        ListIterator<String> iter = lines.listIterator();
-        while (iter.hasNext())
-            iter.set(ChatColor.translateAlternateColorCodes('&', iter.next()));
+        // runs each second
+        if (tick % 20 == 0) {
 
-        String graceMessage = null;
-        if (isRunning() && this.graceTime >= 0 && this.graceTime <= 5) {
-            if (this.graceTime == 0)
-                graceMessage = plugin.getConfigString("time.grace_ended");
-            else
-                graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
-        }
-        // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
-        // Added setting potatoVictim to null if the player died in the kill method
-        if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
-            if (this.potatoVictim != null) {
-                Player victim = Bukkit.getPlayer(potatoVictim);
-                if (victim != null)
-                    kill(victim);
+            this.formattedTime = Utils.formatTime(this.time);
+            List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
+            ListIterator<String> iter = lines.listIterator();
+            while (iter.hasNext())
+                iter.set(ChatColor.translateAlternateColorCodes('&', iter.next()));
+
+            String graceMessage = null;
+            if (isRunning() && this.graceTime >= 0 && this.graceTime <= 5) {
+                if (this.graceTime == 0)
+                    graceMessage = plugin.getConfigString("time.grace_ended");
+                else
+                    graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
             }
-        }
-
-        boolean glow = time == plugin.getConfig().getInt("time.glow");
-
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-
-                scoreboard.update(player, convertPlaceholders(lines, player));
-
-                Integer arrowTime = arrowTimes.get(uuid);
-                if (arrowTime != null && arrowTime >= this.time) {
-                    arrowTimes.remove(uuid);
-                    player.getInventory().setItem(9, new ItemStack(Material.ARROW));
-                }
-
-                if (graceMessage != null)
-                    player.sendMessage(graceMessage);
-
-                if (glow) {
-                    Role role = getRole(player);
-                    if (role != Role.DEAD && role != Role.MURDERER)
-                        player.setGlowing(true);
+            // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
+            // Added setting potatoVictim to null if the player died in the kill method
+            if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
+                if (this.potatoVictim != null) {
+                    Player victim = Bukkit.getPlayer(potatoVictim);
+                    if (victim != null)
+                        kill(victim);
                 }
             }
+
+            boolean glow = time == plugin.getConfig().getInt("time.glow");
+
+            for (UUID uuid : players) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+
+                    scoreboard.update(player, convertPlaceholders(lines, player));
+
+                    if (graceMessage != null)
+                        player.sendMessage(graceMessage);
+
+                    if (glow) {
+                        Role role = getRole(player);
+                        if (role != Role.DEAD && role != Role.MURDERER)
+                            player.setGlowing(true);
+                    }
+                }
+            }
+
+            if (isRunning()) {
+                if (this.graceTime >= 0)
+                    this.graceTime--;
+
+                if (this.potatoTime >= 0)
+                    this.potatoTime--;
+
+                if (this.time <= 0)
+                    end(EndReason.TIME_EXPIRED);
+                else
+                    this.time--;
+            }
+
         }
 
+        // runs every tick
         if (isRunning()) {
-            if (this.graceTime >= 0)
-                this.graceTime--;
+            for (UUID uuid : players) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
 
-            if (this.potatoTime >= 0)
-                this.potatoTime--;
+                    Integer arrowTime = arrowTimes.get(uuid);
+                    if (arrowTime != null) {
 
-            if (this.time <= 0)
-                end(EndReason.TIME_EXPIRED);
-            else
-                this.time--;
+                        int delta = arrowTime - tick;
+                        if (delta <= 0) {
+                            player.setExp(0f);
+                            arrowTimes.remove(uuid);
+                            player.getInventory().setItem(9, new ItemStack(Material.ARROW));
+                        }
+                        player.setExp((float) delta / (20 * plugin.getConfig().getInt("time.bow-cooldown")));
+
+                    }
+
+                }
+            }
         }
+
+        tick++;
 
     }
 
@@ -646,7 +674,7 @@ public class Game extends BukkitRunnable {
         if (!isRunning())
             return;
 
-        int arrowTime = this.time - plugin.getConfig().getInt("time.bow-cooldown");
+        int arrowTime = tick + 20 * plugin.getConfig().getInt("time.bow-cooldown");
         arrowTimes.put(event.getEntity().getUniqueId(), arrowTime);
     }
 
