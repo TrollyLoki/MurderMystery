@@ -6,13 +6,17 @@ import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -40,6 +44,8 @@ public class Game extends BukkitRunnable {
     // Stores the UUID of the player that the potato will kill eventually - this will change several times!
     private UUID potatoVictim = null;
     private ArmorStand droppedBow;
+    private boolean potatoCooldown = false;
+    private HashMap<UUID, Integer> arrowTimes;
     /**
      * Constructs a new game including the given players
      *
@@ -58,7 +64,7 @@ public class Game extends BukkitRunnable {
 
         this.scoreboard = new GameScoreboard(this);
         plugin.getGameListener().registerGame(this);
-        runTaskTimer(plugin, 0, 20);
+        runTaskTimer(plugin, 0, 0);
 
     }
 
@@ -219,12 +225,13 @@ public class Game extends BukkitRunnable {
         this.map = map;
         this.time = plugin.getConfig().getInt("time.total");
         this.graceTime = plugin.getConfig().getInt("time.grace");
+        this.arrowTimes = new HashMap<>();
         // Stores the time until the potato kills its host. Acts like the grace period timer.
         this.potatoTime = plugin.getConfig().getInt("time.potato");
         // Be sure to reset the hotpotato value between games!
         this.hotPotatoMode = false;
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
-        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100) {
+        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100.0) {
             hotPotatoMode = true;
         }
         // Assign Roles
@@ -251,6 +258,7 @@ public class Game extends BukkitRunnable {
 
                 // Initial setup
                 player.teleport(map.getLocation());
+                player.setLevel(0);
                 player.getInventory().clear();
                 Utils.clearPotionEffects(player);
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
@@ -278,7 +286,7 @@ public class Game extends BukkitRunnable {
                     ItemMeta meta = bow.getItemMeta();
                     meta.setDisplayName(plugin.getConfigString("items.detective.bow_name"));
                     meta.setUnbreakable(true);
-                    meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+                    // meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
                     bow.setItemMeta(meta);
                     player.getInventory().setItem(slot, bow);
 
@@ -324,6 +332,7 @@ public class Game extends BukkitRunnable {
         if (this.droppedBow != null)
             droppedBow.remove();
         this.droppedBow = null;
+        this.arrowTimes = null;
         this.running = false;
 
         for (UUID uuid : players) {
@@ -331,6 +340,7 @@ public class Game extends BukkitRunnable {
             if (player != null) {
 
                 mute(player, false);
+                player.setLevel(0);
                 player.getInventory().clear();
                 player.removePotionEffect(PotionEffectType.SATURATION);
                 player.setGlowing(false);
@@ -447,6 +457,7 @@ public class Game extends BukkitRunnable {
 
         droppedBow = location.getWorld().spawn(location, ArmorStand.class);
         droppedBow.setInvisible(true);
+        droppedBow.setInvulnerable(true);
         droppedBow.setRightArmPose(new EulerAngle(-1.48353, 0, -0.174533));
         droppedBow.getEquipment().setItemInMainHand(bow, true);
 
@@ -521,63 +532,112 @@ public class Game extends BukkitRunnable {
 
     }
 
+    private int tick = 0;
+
     @Override
     public void run() {
 
-        this.formattedTime = Utils.formatTime(this.time);
-        List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
-        ListIterator<String> iter = lines.listIterator();
-        while (iter.hasNext())
-            iter.set(ChatColor.translateAlternateColorCodes('&', iter.next()));
+        // runs each second
+        if (tick % 20 == 0) {
 
-        String graceMessage = null;
-        if (isRunning() && this.graceTime >= 0 && this.graceTime <= 5) {
-            if (this.graceTime == 0)
-                graceMessage = plugin.getConfigString("time.grace_ended");
-            else
-                graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
-        }
-        // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
-        // Added setting potatoVictim to null if the player died in the kill method
-        if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
+            this.formattedTime = Utils.formatTime(this.time);
+            List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
+            ListIterator<String> iter = lines.listIterator();
+            while (iter.hasNext())
+                iter.set(ChatColor.translateAlternateColorCodes('&', iter.next()));
+
+            String graceMessage = null;
+            if (isRunning() && this.graceTime >= 0 && this.graceTime <= 5) {
+                if (this.graceTime == 0)
+                    graceMessage = plugin.getConfigString("time.grace_ended");
+                else
+                    graceMessage = String.format(plugin.getConfigString("time.grace_warning"), this.graceTime);
+            }
+            
+            String potatoMessage = null;
+            if (isRunning() && hotPotatoMode && this.potatoTime >= 0) {
+        	      if (this.potatoTime == 0)
+        		        potatoMessage = String.format(plugin.getConfigString("time.potato_burned"), Bukkit.getPlayer(potatoVictim).getName());
+        	      // Else if the potato time is <= to the countdown time - countdown time is so it doesn't spam chat too much
+        	      else if (this.potatoTime <= plugin.getConfig().getInt("time.potato_countdown"))
+        		        potatoMessage = String.format(plugin.getConfigString("time.potato_warning"), this.potatoTime);
+            }
+          
+            // Almost forgot to check if potatomode was on! If I hadn't caught that we'd be killing a null object!
+            // Added setting potatoVictim to null if the player died in the kill method
+            if (isRunning() && hotPotatoMode && this.potatoTime == 0) {
             if (this.potatoVictim != null) {
                 Player victim = Bukkit.getPlayer(potatoVictim);
-                if (victim != null)
+                if (victim != null) {
+                    // bam, fireworks
+                    Firework firework = victim.getWorld().spawn(victim.getLocation(), Firework.class);
+            		    FireworkMeta fireMeta = firework.getFireworkMeta();
+            		    fireMeta.addEffect(FireworkEffect.builder().withColor(Color.RED).flicker(true).build());
+            		    firework.detonate();
                     kill(victim);
+                }
             }
+
+            boolean glow = time == plugin.getConfig().getInt("time.glow");
+
+            for (UUID uuid : players) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+
+                    scoreboard.update(player, convertPlaceholders(lines, player));
+
+                    if (graceMessage != null)
+                        player.sendMessage(graceMessage);
+                    if (potatoMessage != null)
+                        player.sendMessage(potatoMessage);
+
+                    if (glow) {
+                        Role role = getRole(player);
+                        if (role != Role.DEAD && role != Role.MURDERER)
+                            player.setGlowing(true);
+                    }
+                }
+            }
+
+            if (isRunning()) {
+                if (this.graceTime >= 0)
+                    this.graceTime--;
+
+                if (this.potatoTime >= 0)
+                    this.potatoTime--;
+
+                if (this.time <= 0)
+                    end(EndReason.TIME_EXPIRED);
+                else
+                    this.time--;
+            }
+
         }
 
-        boolean glow = time == plugin.getConfig().getInt("time.glow");
+        // runs every tick
+        if (isRunning()) {
+            for (UUID uuid : players) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
 
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
+                    Integer arrowTime = arrowTimes.get(uuid);
+                    if (arrowTime != null) {
 
-                scoreboard.update(player, convertPlaceholders(lines, player));
+                        int delta = arrowTime - tick;
+                        if (delta <= 0) {
+                            player.setExp(0f);
+                            arrowTimes.remove(uuid);
+                            player.getInventory().setItem(9, new ItemStack(Material.ARROW));
+                        }
+                        player.setExp((float) delta / (20 * plugin.getConfig().getInt("time.bow-cooldown")));
 
-                if (graceMessage != null)
-                    player.sendMessage(graceMessage);
+                    }
 
-                if (glow) {
-                    Role role = getRole(player);
-                    if (role != Role.DEAD && role != Role.MURDERER)
-                        player.setGlowing(true);
                 }
             }
         }
 
-        if (isRunning()) {
-            if (this.graceTime >= 0)
-                this.graceTime--;
-
-            if (this.potatoTime >= 0)
-                this.potatoTime--;
-
-            if (this.time <= 0)
-                end(EndReason.TIME_EXPIRED);
-            else
-                this.time--;
-        }
+        tick++;
 
     }
 
@@ -616,19 +676,39 @@ public class Game extends BukkitRunnable {
                 }
                 // Handling for if none of the above items were used to damage
                 else if (player.getInventory().getItemInMainHand().getType() == Material.BAKED_POTATO) {
-                    player.getInventory().remove(Material.BAKED_POTATO);
-                    ((Player) event.getEntity()).getInventory().addItem(potato);
-                    // haha funny sound
-                    event.getEntity().getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
-                    // new potato victim
-                    potatoVictim = event.getEntity().getUniqueId();
-
+                	if (!potatoCooldown) {
+                		player.getInventory().remove(Material.BAKED_POTATO);
+                		((Player) event.getEntity()).getInventory().addItem(potato);
+                		// haha funny sound
+                		event.getEntity().getWorld().playSound(event.getEntity().getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1, 1);
+                		// new potato victim
+                		potatoVictim = event.getEntity().getUniqueId();
+                		// particles!!!!
+                		event.getEntity().getWorld().spawnParticle(Particle.VILLAGER_ANGRY, event.getEntity().getLocation().add(0, 1, 0), 3, 0.3, 0, 0.3);
+                		// set potato cooldown and set bukkitrunnable to remove it in a second
+                		potatoCooldown = true;
+                		new BukkitRunnable() {
+							@Override
+							public void run() {
+								potatoCooldown = false;
+								
+							}
+                		}.runTaskLater(plugin, 20);
+                	}
                 }
 
             }
 
         }
 
+    }
+
+    public void onEntityShootBow(EntityShootBowEvent event) {
+        if (!isRunning())
+            return;
+
+        int arrowTime = tick + 20 * plugin.getConfig().getInt("time.bow-cooldown");
+        arrowTimes.put(event.getEntity().getUniqueId(), arrowTime);
     }
 
     public void onPlayerMove(PlayerMoveEvent event) {
@@ -648,7 +728,7 @@ public class Game extends BukkitRunnable {
 
         int online = 0;
         for (UUID player : players) {
-            if (plugin.getServer().getPlayer(player) != null)
+            if (!player.equals(event.getPlayer().getUniqueId()) && plugin.getServer().getPlayer(player) != null)
                 online++;
         }
         if (online < 2) {
