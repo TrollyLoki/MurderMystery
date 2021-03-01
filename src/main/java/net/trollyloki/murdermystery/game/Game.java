@@ -3,10 +3,8 @@ package net.trollyloki.murdermystery.game;
 import net.trollyloki.murdermystery.MurderMysteryPlugin;
 import net.trollyloki.murdermystery.Utils;
 import org.bukkit.*;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -46,6 +44,7 @@ public class Game extends BukkitRunnable {
     private ArmorStand droppedBow;
     private boolean potatoCooldown = false;
     private HashMap<UUID, Integer> arrowTimes;
+
     /**
      * Constructs a new game including the given players
      *
@@ -160,6 +159,29 @@ public class Game extends BukkitRunnable {
     }
 
     /**
+     * Sets the role of the given player to the given role
+     *
+     * @param player Player
+     * @param role Role
+     * @return Previous role of the player
+     */
+    public Role setRole(Player player, Role role) {
+        if (roles == null)
+            return null;
+
+        Role previous;
+        if (role != Role.DEAD) {
+            previous = roles.put(player.getUniqueId(), role);
+            player.addScoreboardTag(role.name().toLowerCase());
+        } else
+            previous = roles.remove(player.getUniqueId());
+
+        if (previous != null)
+            player.removeScoreboardTag(previous.name().toLowerCase());
+        return previous;
+    }
+
+    /**
      * Gets the players in this game that are alive
      *
      * @return Set of players
@@ -238,19 +260,19 @@ public class Game extends BukkitRunnable {
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(players);
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
-        if (hotPotatoMode == true) {
+        if (hotPotatoMode) {
             this.potatoVictim = Utils.getRandomElement(options);
         }
         UUID murderer = Utils.removeRandomElement(options);
-        this.roles.put(murderer, Role.MURDERER);
+        setRole(Bukkit.getPlayer(murderer), Role.MURDERER);
         UUID detective = Utils.removeRandomElement(options);
-        this.roles.put(detective, Role.DETECTIVE);
+        setRole(Bukkit.getPlayer(detective), Role.DETECTIVE);
         if (!options.isEmpty()) {
             UUID underdog = Utils.removeRandomElement(options);
-            this.roles.put(underdog, Role.UNDERDOG);
+            setRole(Bukkit.getPlayer(underdog), Role.UNDERDOG);
         }
         for (UUID bystander : options)
-            this.roles.put(bystander, Role.BYSTANDER);
+            setRole(Bukkit.getPlayer(bystander), Role.BYSTANDER);
 
         for (UUID uuid : players) {
             Player player = Bukkit.getPlayer(uuid);
@@ -344,9 +366,12 @@ public class Game extends BukkitRunnable {
                 player.getInventory().clear();
                 player.removePotionEffect(PotionEffectType.SATURATION);
                 player.setGlowing(false);
+                setRole(player, Role.DEAD);
 
             }
         }
+
+        this.roles = null;
 
     }
 
@@ -402,7 +427,7 @@ public class Game extends BukkitRunnable {
 
         mute(player, true);
 
-        Role role = roles.remove(player.getUniqueId());
+        Role role = setRole(player, Role.DEAD);
         if (role != null) {
 
             player.setGameMode(GameMode.SPECTATOR);
@@ -484,7 +509,7 @@ public class Game extends BukkitRunnable {
             droppedBow = null;
         }
 
-        roles.put(player.getUniqueId(), Role.DETECTIVE);
+        setRole(player, Role.DETECTIVE);
         player.getInventory().setItem(1, bow);
 
         for (UUID uuid : players) {
