@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 public class Map {
 
+    private final boolean active;
     private final String name;
     private final Location location;
 
@@ -17,9 +18,19 @@ public class Map {
      * @param name Name
      * @param location Starting location
      */
-    public Map(String name, Location location) {
+    public Map(boolean active, String name, Location location) {
+        this.active = active;
         this.name = name;
         this.location = location;
+    }
+
+    /**
+     * Gets if this map is active
+     *
+     * @return {@code true} if this map is active, otherwise {@code false}
+     */
+    public boolean isActive() {
+        return active;
     }
 
     /**
@@ -47,7 +58,8 @@ public class Map {
      * @return Map
      */
     public static Map load(ConfigurationSection config) {
-        return new Map(config.getString("name"), Utils.loadLocation(config.getConfigurationSection("location")));
+        return new Map(config.getBoolean("active"),
+                config.getString("name"), Utils.loadLocation(config.getConfigurationSection("location")));
     }
 
     /**
@@ -58,8 +70,14 @@ public class Map {
      */
     public static Map loadRandom(ConfigurationSection mapConfig) {
         ArrayList<String> maps = new ArrayList<>(mapConfig.getKeys(false));
-        String map = maps.get((int) (Math.random() * maps.size()));
-        return load(mapConfig.getConfigurationSection(map));
+
+        Map map;
+        do {
+            String mapKey = maps.get((int) (Math.random() * maps.size()));
+            map = load(mapConfig.getConfigurationSection(mapKey));
+        } while (!map.isActive());
+
+        return map;
     }
 
 }

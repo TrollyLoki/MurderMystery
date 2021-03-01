@@ -1,6 +1,7 @@
 maps:
-  test:
-    name: 'Test Map'
+  example:
+    active: false
+    name: 'Example Map'
     location:
       world: world
       x: 0.0
