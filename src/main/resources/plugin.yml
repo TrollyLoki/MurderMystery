@@ -3,6 +3,8 @@ main: net.trollyloki.murdermystery.MurderMysteryPlugin
 version: ${project.version}
 api-version: 1.16
 
+depend: [MiniGameLibrary]
+
 author: TrollyLoki
 authors: [Arti_Creep]
 

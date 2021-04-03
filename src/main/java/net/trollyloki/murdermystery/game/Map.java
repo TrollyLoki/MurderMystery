@@ -1,6 +1,6 @@
 package net.trollyloki.murdermystery.game;
 
-import net.trollyloki.murdermystery.Utils;
+import net.trollyloki.minigames.library.utils.MiniGameUtils;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -59,7 +59,7 @@ public class Map {
      */
     public static Map load(ConfigurationSection config) {
         return new Map(config.getBoolean("active"),
-                config.getString("name"), Utils.loadLocation(config.getConfigurationSection("location")));
+                config.getString("name"), MiniGameUtils.loadLocation(config.getConfigurationSection("location")));
     }
 
     /**

@@ -1,7 +1,10 @@
 package net.trollyloki.murdermystery.game;
 
+import net.trollyloki.minigames.library.managers.Game;
+import net.trollyloki.minigames.library.managers.MiniGameManager;
+import net.trollyloki.minigames.library.managers.Party;
+import net.trollyloki.minigames.library.utils.MiniGameUtils;
 import net.trollyloki.murdermystery.MurderMysteryPlugin;
-import net.trollyloki.murdermystery.Utils;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -23,14 +26,11 @@ import org.bukkit.util.EulerAngle;
 
 import java.util.*;
 
-public class Game extends BukkitRunnable {
+public class MurderMysteryGame extends Game {
 
     public static final String MUTE_CHANNEL = "murdermystery:mute";
 
     private final MurderMysteryPlugin plugin;
-    private final ArrayList<UUID> players;
-    private final HashMap<UUID, Integer> scores;
-    private final GameScoreboard scoreboard;
     private boolean running = false;
     private Map map = null;
     private HashMap<UUID, Role> roles = null;
@@ -46,25 +46,14 @@ public class Game extends BukkitRunnable {
     private HashMap<UUID, Integer> arrowTimes;
 
     /**
-     * Constructs a new game including the given players
+     * Constructs a new murder mystery game
      *
+     * @param manager Mini game manager
      * @param plugin Plugin running this game
-     * @throws IllegalArgumentException If less than 2 players are provided
      */
-    public Game(MurderMysteryPlugin plugin, ArrayList<Player> players) {
-        if (players.size() < 2)
-            throw new IllegalArgumentException("A game must have at least 2 players");
-
+    public MurderMysteryGame(MiniGameManager manager, MurderMysteryPlugin plugin) {
+        super(manager);
         this.plugin = plugin;
-        this.players = new ArrayList<>();
-        this.scores = new HashMap<>();
-        for (Player player : players)
-            this.players.add(player.getUniqueId());
-
-        this.scoreboard = new GameScoreboard(this);
-        plugin.getGameListener().registerGame(this);
-        runTaskTimer(plugin, 0, 0);
-
     }
 
     /**
@@ -76,56 +65,16 @@ public class Game extends BukkitRunnable {
         return plugin;
     }
 
-    /**
-     * Gets the players in this game
-     *
-     * @return List of players
-     */
-    public List<UUID> getPlayers() {
-        return Collections.unmodifiableList(players);
-    }
-
-    /**
-     * Gets the score of a player in this game
-     *
-     * @param player Player
-     * @return Score
-     */
-    public int getScore(UUID player) {
-        return scores.getOrDefault(player, 0);
-    }
-
-    /**
-     * Increments the score of a player in this game
-     *
-     * @param player Player
-     * @param amount Amount to increase the score by
-     * @return New score
-     */
-    public int increaseScore(UUID player, int amount) {
-        int score = getScore(player) + amount;
-        scores.put(player, score);
-        return score;
-    }
-
-    /**
-     * Releases this game
-     */
-    public void release() {
-        if (isRunning())
-            stop();
-
-        cancel();
-        plugin.getGameListener().unregisterGame(this);
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-
-                player.setScoreboard(player.getServer().getScoreboardManager().getMainScoreboard());
-
-            }
+    @Override
+    public int addAll(Party party) {
+        Set<Player> players = party.getOnlinePlayers();
+        String title = plugin.getConfigString("scoreboard.title");
+        for (Player player : players) {
+            add(player.getUniqueId());
+            getScoreboard().add(player.getUniqueId(), player.getName());
+            getScoreboard().getPlayerScoreboard(player.getUniqueId()).setTitle(title);
         }
-
+        return players.size();
     }
 
     /**
@@ -243,6 +192,10 @@ public class Game extends BukkitRunnable {
         if (isRunning())
             throw new IllegalStateException("Game is already running");
 
+        Set<Player> players = getOnlinePlayers();
+        if (players.size() < 2)
+            throw new IllegalStateException("Less than 2 players are online");
+
         this.running = true;
         this.map = map;
         this.time = plugin.getConfig().getInt("time.total");
@@ -258,85 +211,82 @@ public class Game extends BukkitRunnable {
         }
         // Assign Roles
         this.roles = new HashMap<>();
-        ArrayList<UUID> options = new ArrayList<>(players);
+        ArrayList<UUID> options = new ArrayList<>(getPlayers());
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
         if (hotPotatoMode) {
-            this.potatoVictim = Utils.getRandomElement(options);
+            this.potatoVictim = MiniGameUtils.getRandomElement(options);
         }
-        UUID murderer = Utils.removeRandomElement(options);
+        UUID murderer = MiniGameUtils.removeRandomElement(options);
         setRole(Bukkit.getPlayer(murderer), Role.MURDERER);
-        UUID detective = Utils.removeRandomElement(options);
+        UUID detective = MiniGameUtils.removeRandomElement(options);
         setRole(Bukkit.getPlayer(detective), Role.DETECTIVE);
         if (!options.isEmpty()) {
-            UUID underdog = Utils.removeRandomElement(options);
+            UUID underdog = MiniGameUtils.removeRandomElement(options);
             setRole(Bukkit.getPlayer(underdog), Role.UNDERDOG);
         }
         for (UUID bystander : options)
             setRole(Bukkit.getPlayer(bystander), Role.BYSTANDER);
 
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
+        for (Player player : players) {
 
-                // Initial setup
-                player.teleport(map.getLocation());
-                player.setLevel(0);
-                player.getInventory().clear();
-                Utils.clearPotionEffects(player);
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
-                        true, false));
-                player.setGameMode(GameMode.ADVENTURE);
+            // Initial setup
+            player.teleport(map.getLocation());
+            player.setLevel(0);
+            player.getInventory().clear();
+            MiniGameUtils.clearPotionEffects(player);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
+                    true, false));
+            player.setGameMode(GameMode.ADVENTURE);
 
-                Role role = getRole(player);
+            Role role = getRole(player);
 
-                // Give role items
-                int slot = 1;
-                if (player.getInventory().getHeldItemSlot() == slot)
-                    slot++;
-                if (role == Role.MURDERER) {
+            // Give role items
+            int slot = 1;
+            if (player.getInventory().getHeldItemSlot() == slot)
+                slot++;
+            if (role == Role.MURDERER) {
 
-                    sword = new ItemStack(Material.IRON_SWORD);
-                    ItemMeta meta = sword.getItemMeta();
-                    meta.setDisplayName(plugin.getConfigString("items.murderer.sword_name"));
-                    meta.setUnbreakable(true);
-                    sword.setItemMeta(meta);
-                    player.getInventory().setItem(slot, sword);
+                sword = new ItemStack(Material.IRON_SWORD);
+                ItemMeta meta = sword.getItemMeta();
+                meta.setDisplayName(plugin.getConfigString("items.murderer.sword_name"));
+                meta.setUnbreakable(true);
+                sword.setItemMeta(meta);
+                player.getInventory().setItem(slot, sword);
 
-                } else if (role == Role.DETECTIVE) {
+            } else if (role == Role.DETECTIVE) {
 
-                    bow = new ItemStack(Material.BOW);
-                    ItemMeta meta = bow.getItemMeta();
-                    meta.setDisplayName(plugin.getConfigString("items.detective.bow_name"));
-                    meta.setUnbreakable(true);
-                    // meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
-                    bow.setItemMeta(meta);
-                    player.getInventory().setItem(slot, bow);
+                bow = new ItemStack(Material.BOW);
+                ItemMeta meta = bow.getItemMeta();
+                meta.setDisplayName(plugin.getConfigString("items.detective.bow_name"));
+                meta.setUnbreakable(true);
+                // meta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+                bow.setItemMeta(meta);
+                player.getInventory().setItem(slot, bow);
 
-                } else if (role == Role.UNDERDOG) {
+            } else if (role == Role.UNDERDOG) {
 
-                    player.getInventory().setItem(slot, new ItemStack(Material.SNOWBALL));
-
-                }
-                // The Hot Potato isn't really a role. It's just a random item.
-                if (hotPotatoMode && player.getUniqueId().equals(potatoVictim)) {
-
-                    potato = new ItemStack(Material.BAKED_POTATO);
-                    ItemMeta meta = potato.getItemMeta();
-                    meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
-                    meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_lore")));
-                    potato.setItemMeta(meta);
-                    // Just using addItem.. not setItem, sorry
-                    player.getInventory().addItem(potato);
-
-                }
-                player.getInventory().setItem(9, new ItemStack(Material.ARROW));
-
-                // Show titles
-                player.sendTitle(convertPlaceholders(plugin.getConfigString("titles.start.title"), player),
-                        convertPlaceholders(plugin.getConfigString("titles.start.subtitle"), player),
-                        5, 100, 10);
+                player.getInventory().setItem(slot, new ItemStack(Material.SNOWBALL));
 
             }
+            // The Hot Potato isn't really a role. It's just a random item.
+            if (hotPotatoMode && player.getUniqueId().equals(potatoVictim)) {
+
+                potato = new ItemStack(Material.BAKED_POTATO);
+                ItemMeta meta = potato.getItemMeta();
+                meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
+                meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_lore")));
+                potato.setItemMeta(meta);
+                // Just using addItem.. not setItem, sorry
+                player.getInventory().addItem(potato);
+
+            }
+            player.getInventory().setItem(9, new ItemStack(Material.ARROW));
+
+            // Show titles
+            player.sendTitle(convertPlaceholders(plugin.getConfigString("titles.start.title"), player),
+                    convertPlaceholders(plugin.getConfigString("titles.start.subtitle"), player),
+                    5, 100, 10);
+
         }
 
     }
@@ -357,21 +307,17 @@ public class Game extends BukkitRunnable {
         this.arrowTimes = null;
         this.running = false;
 
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-
-                mute(player, false);
-                player.setLevel(0);
-                player.getInventory().clear();
-                player.removePotionEffect(PotionEffectType.SATURATION);
-                player.setGlowing(false);
-                setRole(player, Role.DEAD);
-
-            }
+        for (Player player : getOnlinePlayers()) {
+            mute(player, false);
+            player.setLevel(0);
+            player.getInventory().clear();
+            player.removePotionEffect(PotionEffectType.SATURATION);
+            player.setGlowing(false);
+            setRole(player, Role.DEAD);
         }
 
         this.roles = null;
+        close();
 
     }
 
@@ -387,7 +333,7 @@ public class Game extends BukkitRunnable {
         Role role = getRole(player);
         int alive = getAlivePlayerCount();
         String time = getFormattedTimeLeft();
-        int score = getScore(player.getUniqueId());
+        int score = -1;
 
         return string
                 .replaceAll("%map%", map != null ? map.getName() : "None")
@@ -433,14 +379,8 @@ public class Game extends BukkitRunnable {
             player.setGameMode(GameMode.SPECTATOR);
             player.getInventory().clear();
 
-            for (UUID uuid : players) {
-                Player p = Bukkit.getPlayer(uuid);
-                if (p != null) {
-
-                    p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_DEATH, SoundCategory.PLAYERS, 1, 1);
-
-                }
-            }
+            for (Player p : getOnlinePlayers())
+                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_DEATH, SoundCategory.PLAYERS, 1, 1);
 
             if (role == Role.MURDERER)
                 end(EndReason.MURDERER_KILLED);
@@ -486,14 +426,8 @@ public class Game extends BukkitRunnable {
         droppedBow.setRightArmPose(new EulerAngle(-1.48353, 0, -0.174533));
         droppedBow.getEquipment().setItemInMainHand(bow, true);
 
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-
-                player.sendMessage(plugin.getConfigString("items.detective.bow_dropped"));
-
-            }
-        }
+        for (Player player : getOnlinePlayers())
+            player.sendMessage(plugin.getConfigString("items.detective.bow_dropped"));
 
     }
 
@@ -512,14 +446,8 @@ public class Game extends BukkitRunnable {
         setRole(player, Role.DETECTIVE);
         player.getInventory().setItem(1, bow);
 
-        for (UUID uuid : players) {
-            Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
-
-                p.sendMessage(plugin.getConfigString("items.detective.bow_pickedup"));
-
-            }
-        }
+        for (Player p : getOnlinePlayers())
+            p.sendMessage(plugin.getConfigString("items.detective.bow_pickedup"));
 
     }
 
@@ -531,29 +459,16 @@ public class Game extends BukkitRunnable {
      */
     public void end(EndReason reason) {
 
+        for (Player player : getOnlinePlayers()) {
+            // Show titles
+            player.sendTitle(plugin.getConfigString("titles.end.title"),
+                    plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
+                    5, 100, 10);
+
+        }
+
+
         stop();
-
-        for (UUID uuid : players) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-
-                // Show titles
-                player.sendTitle(plugin.getConfigString("titles.end.title"),
-                        plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
-                        5, 100, 10);
-
-            }
-        }
-
-        if (reason == EndReason.ALL_KILLED) {
-            for (UUID player : roles.keySet())
-                increaseScore(player, 2);
-        } else {
-            for (java.util.Map.Entry<UUID, Role> entry : roles.entrySet()) {
-                if (entry.getValue() != Role.MURDERER)
-                    increaseScore(entry.getKey(), 1);
-            }
-        }
 
     }
 
@@ -562,10 +477,12 @@ public class Game extends BukkitRunnable {
     @Override
     public void run() {
 
+        Set<Player> players = getOnlinePlayers();
+
         // runs each second
         if (tick % 20 == 0) {
 
-            this.formattedTime = Utils.formatTime(this.time);
+            this.formattedTime = MiniGameUtils.formatTime(this.time);
             List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
             ListIterator<String> iter = lines.listIterator();
             while (iter.hasNext())
@@ -602,23 +519,22 @@ public class Game extends BukkitRunnable {
 
             boolean glow = time == plugin.getConfig().getInt("time.glow");
 
-            for (UUID uuid : players) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
+            for (Player player : players) {
 
-                    scoreboard.update(player, convertPlaceholders(lines, player));
+                getScoreboard().getPlayerScoreboard(player.getUniqueId())
+                        .setLines(convertPlaceholders(lines, player));
 
-                    if (graceMessage != null)
-                        player.sendMessage(graceMessage);
-                    if (potatoMessage != null)
-                        player.sendMessage(potatoMessage);
+                if (graceMessage != null)
+                    player.sendMessage(graceMessage);
+                if (potatoMessage != null)
+                    player.sendMessage(potatoMessage);
 
-                    if (glow) {
-                        Role role = getRole(player);
-                        if (role != Role.DEAD && role != Role.MURDERER)
-                            player.setGlowing(true);
-                    }
+                if (glow) {
+                    Role role = getRole(player);
+                    if (role != Role.DEAD && role != Role.MURDERER)
+                        player.setGlowing(true);
                 }
+
             }
 
             if (isRunning()) {
@@ -638,24 +554,21 @@ public class Game extends BukkitRunnable {
 
         // runs every tick
         if (isRunning()) {
-            for (UUID uuid : players) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
+            for (Player player : players) {
 
-                    Integer arrowTime = arrowTimes.get(uuid);
-                    if (arrowTime != null) {
+                Integer arrowTime = arrowTimes.get(player.getUniqueId());
+                if (arrowTime != null) {
 
-                        int delta = arrowTime - tick;
-                        if (delta <= 0) {
-                            player.setExp(0f);
-                            arrowTimes.remove(uuid);
-                            player.getInventory().setItem(9, new ItemStack(Material.ARROW));
-                        }
-                        player.setExp((float) delta / (20 * plugin.getConfig().getInt("time.bow-cooldown")));
-
+                    int delta = arrowTime - tick;
+                    if (delta <= 0) {
+                        player.setExp(0f);
+                        arrowTimes.remove(player.getUniqueId());
+                        player.getInventory().setItem(9, new ItemStack(Material.ARROW));
                     }
+                    player.setExp((float) delta / (20 * plugin.getConfig().getInt("time.bow-cooldown")));
 
                 }
+
             }
         }
 
@@ -663,7 +576,8 @@ public class Game extends BukkitRunnable {
 
     }
 
-    public void onEntityDamage(EntityDamageEvent event) {
+    @Override
+    public void onPlayerDamage(EntityDamageEvent event) {
         event.setCancelled(true);
         if (!isRunning())
             return;
@@ -674,7 +588,8 @@ public class Game extends BukkitRunnable {
             kill((Player) event.getEntity());
     }
 
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+    @Override
+    public void onPlayerDamageByEntity(EntityDamageByEntityEvent event) {
         event.setCancelled(true);
         if (!isRunning())
             return;
@@ -725,7 +640,8 @@ public class Game extends BukkitRunnable {
 
     }
 
-    public void onEntityShootBow(EntityShootBowEvent event) {
+    @Override
+    public void onPlayerShootBow(EntityShootBowEvent event) {
         if (!isRunning())
             return;
 
@@ -733,6 +649,7 @@ public class Game extends BukkitRunnable {
         arrowTimes.put(event.getEntity().getUniqueId(), arrowTime);
     }
 
+    @Override
     public void onPlayerMove(PlayerMoveEvent event) {
         if (!isRunning())
             return;
@@ -744,18 +661,19 @@ public class Game extends BukkitRunnable {
             pickupBow(event.getPlayer());
     }
 
+    @Override
     public void onPlayerQuit(PlayerQuitEvent event) {
         if (isRunning())
             kill(event.getPlayer());
 
         int online = 0;
-        for (UUID player : players) {
+        for (UUID player : getPlayers()) {
             if (!player.equals(event.getPlayer().getUniqueId()) && plugin.getServer().getPlayer(player) != null)
                 online++;
         }
         if (online < 2) {
             plugin.getLogger().warning("This game is being released because less than 2 players are still online");
-            release();
+            close();
         }
 
     }

@@ -1,7 +1,9 @@
 package net.trollyloki.murdermystery;
 
-import net.trollyloki.murdermystery.game.Game;
+import net.trollyloki.minigames.library.managers.Game;
+import net.trollyloki.minigames.library.managers.Party;
 import net.trollyloki.murdermystery.game.Map;
+import net.trollyloki.murdermystery.game.MurderMysteryGame;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,7 +12,6 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
@@ -34,63 +35,11 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
 
             }
 
-            else if (args[0].equalsIgnoreCase("create")) {
-
-                ArrayList<Player> players = new ArrayList<>();
-                if (args.length > 1) {
-                    for (int i = 1; i < args.length; i++) {
-                        Player player = plugin.getServer().getPlayerExact(args[i]);
-                        if (player == null) {
-                            sender.sendMessage(ChatColor.RED + args[i] + " is not online");
-                            return false;
-                        }
-                        players.add(player);
-                    }
-                } else {
-                    for (Player player : plugin.getServer().getOnlinePlayers())
-                        players.add(player);
-                }
-
-                for (Player player : players) {
-                    if (plugin.getGameListener().getGame(player) != null) {
-                        sender.sendMessage(ChatColor.RED + player.getName() + " is already in a game");
-                        return false;
-                    }
-                }
-
-                if (players.size() < 2) {
-                    sender.sendMessage(ChatColor.RED + "A game must have at least 2 players");
-                    return false;
-                }
-
-                sender.sendMessage(ChatColor.GREEN + "Creating game with " + players.size() + " players");
-                new Game(plugin, players);
-                return true;
-
-            }
-
-            else if (args[0].equalsIgnoreCase("release")) {
-
-                Game game = getGame(sender);
-                if (game == null)
-                    return false;
-
-                game.release();
-                sender.sendMessage(ChatColor.GREEN + "Your game has been released");
-                return true;
-
-            }
-
             else if (args[0].equalsIgnoreCase("start")) {
 
-                Game game = getGame(sender);
-                if (game == null)
+                Party party = getModeratingParty(sender);
+                if (party == null)
                     return false;
-
-                if (game.isRunning()) {
-                    sender.sendMessage(ChatColor.RED + "Your game has already been started");
-                    return false;
-                }
 
                 ConfigurationSection mapConfig = plugin.getConfig().getConfigurationSection("maps");
                 Map map;
@@ -105,6 +54,8 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
                 }
 
                 sender.sendMessage(ChatColor.GREEN + "Starting game on " + map.getName());
+                MurderMysteryGame game = new MurderMysteryGame(plugin.getManager(), plugin);
+                game.addAll(party);
                 game.start(map);
                 return true;
 
@@ -112,7 +63,7 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
 
             else if (args[0].equalsIgnoreCase("stop")) {
 
-                Game game = getGame(sender);
+                MurderMysteryGame game = getMurderMysteryGame(sender);
                 if (game == null)
                     return false;
 
@@ -129,7 +80,7 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
 
         }
 
-        sender.sendMessage(ChatColor.RED + "Usage: /" + label + " <reload|create|release|start|stop>");
+        sender.sendMessage(ChatColor.RED + "Usage: /" + label + " <reload|start|stop>");
         return false;
 
     }
@@ -139,7 +90,7 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
         return null;
     }
 
-    public Game getGame(CommandSender sender) {
+    public Party getModeratingParty(CommandSender sender) {
 
         if (!(sender instanceof Player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command");
@@ -147,13 +98,31 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
         }
 
         Player player = (Player) sender;
-        Game game = plugin.getGameListener().getGame(player);
-        if (game == null) {
-            sender.sendMessage(ChatColor.RED + "You are not in a game");
+        Party party = plugin.getManager().getParty(player.getUniqueId());
+        if (party == null || !party.isModerator(player.getUniqueId())) {
+            sender.sendMessage(ChatColor.RED + "You must be a party moderator to start a murder mystery game");
             return null;
         }
 
-        return game;
+        return party;
+
+    }
+
+    public MurderMysteryGame getMurderMysteryGame(CommandSender sender) {
+
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.RED + "Only players can use this command");
+            return null;
+        }
+
+        Player player = (Player) sender;
+        Game game = plugin.getManager().getGame(player.getUniqueId());
+        if (!(game instanceof MurderMysteryGame)) {
+            sender.sendMessage(ChatColor.RED + "You are not in a murder mystery game");
+            return null;
+        }
+
+        return (MurderMysteryGame) game;
 
     }
 

@@ -1,27 +1,32 @@
 package net.trollyloki.murdermystery;
 
-import net.trollyloki.murdermystery.game.Game;
+import net.trollyloki.minigames.library.MiniGameLibraryPlugin;
+import net.trollyloki.minigames.library.managers.MiniGameManager;
+import net.trollyloki.murdermystery.game.MurderMysteryGame;
 import org.bukkit.ChatColor;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MurderMysteryPlugin extends JavaPlugin {
 
-    private GameListener gameListener;
+    private MiniGameManager manager;
 
     @Override
     public void onEnable() {
 
         saveDefaultConfig();
 
-        getServer().getMessenger().registerOutgoingPluginChannel(this, Game.MUTE_CHANNEL);
-        gameListener = new GameListener(this);
+        getServer().getMessenger().registerOutgoingPluginChannel(this, MurderMysteryGame.MUTE_CHANNEL);
+
+        Plugin miniGameLibrary = getServer().getPluginManager().getPlugin("MiniGameLibrary");
+        this.manager = ((MiniGameLibraryPlugin) miniGameLibrary).getMiniGameManager();
 
         getCommand("murdermystery").setExecutor(new MurderMysteryCommand(this));
 
     }
 
-    public GameListener getGameListener() {
-        return gameListener;
+    public MiniGameManager getManager() {
+        return manager;
     }
 
     /**
