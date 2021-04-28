@@ -10,5 +10,4 @@ authors: [Arti_Creep]
 
 commands:
   murdermystery:
-    permission: murdermystery.admin
     aliases: [mm]

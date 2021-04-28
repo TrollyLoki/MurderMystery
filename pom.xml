@@ -19,6 +19,10 @@
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -29,9 +33,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>net.trollyloki.minigames</groupId>
+            <groupId>com.github.TrollyLoki</groupId>
             <artifactId>MiniGameLibrary</artifactId>
-            <version>1.0</version>
+            <version>1.0.1</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

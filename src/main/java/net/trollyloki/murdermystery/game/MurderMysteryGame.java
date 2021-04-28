@@ -227,6 +227,7 @@ public class MurderMysteryGame extends Game {
         for (UUID bystander : options)
             setRole(Bukkit.getPlayer(bystander), Role.BYSTANDER);
 
+        getScoreboard().setNameTagVisibility(false);
         for (Player player : players) {
 
             // Initial setup
