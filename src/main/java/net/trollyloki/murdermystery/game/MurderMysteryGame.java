@@ -14,6 +14,7 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -648,6 +649,15 @@ public class MurderMysteryGame extends Game {
 
         int arrowTime = tick + 20 * plugin.getConfig().getInt("time.bow-cooldown");
         arrowTimes.put(event.getEntity().getUniqueId(), arrowTime);
+    }
+
+    @Override
+    public void onProjectileHit(ProjectileHitEvent event) {
+        if (event.getEntity().getShooter() instanceof Player) {
+            if (contains(((Player) event.getEntity().getShooter()).getUniqueId())) {
+                event.getEntity().remove();
+            }
+        }
     }
 
     @Override
