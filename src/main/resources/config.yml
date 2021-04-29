@@ -80,3 +80,7 @@ items:
 
 chance:
   hotpotato: 1
+
+score:
+  default: 1
+  murderer: 3

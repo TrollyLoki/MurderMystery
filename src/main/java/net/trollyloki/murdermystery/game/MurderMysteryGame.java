@@ -26,6 +26,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.EulerAngle;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class MurderMysteryGame extends Game {
 
@@ -34,6 +36,7 @@ public class MurderMysteryGame extends Game {
     private final MurderMysteryPlugin plugin;
     private boolean running = false;
     private Map map = null;
+    private HashSet<UUID> alive = null;
     private HashMap<UUID, Role> roles = null;
     private int time = 0, graceTime = 0, potatoTime = 0;
     private String formattedTime = "0:00";
@@ -105,7 +108,7 @@ public class MurderMysteryGame extends Game {
     public Role getRole(Player player) {
         if (roles == null)
             return null;
-        return roles.getOrDefault(player.getUniqueId(), Role.DEAD);
+        return roles.get(player.getUniqueId());
     }
 
     /**
@@ -120,7 +123,7 @@ public class MurderMysteryGame extends Game {
             return null;
 
         Role previous;
-        if (role != Role.DEAD) {
+        if (role != null) {
             previous = roles.put(player.getUniqueId(), role);
             player.addScoreboardTag(role.name().toLowerCase());
         } else
@@ -137,10 +140,10 @@ public class MurderMysteryGame extends Game {
      * @return Set of players
      */
     public Set<UUID> getAlivePlayers() {
-        if (roles == null)
+        if (alive == null)
             return null;
         else
-            return Collections.unmodifiableSet(roles.keySet());
+            return Collections.unmodifiableSet(alive);
     }
 
     /**
@@ -149,10 +152,10 @@ public class MurderMysteryGame extends Game {
      * @return Number of players
      */
     public int getAlivePlayerCount() {
-        if (roles == null)
+        if (alive == null)
             return 0;
         else
-            return roles.size();
+            return alive.size();
     }
 
     /**
@@ -211,8 +214,10 @@ public class MurderMysteryGame extends Game {
             hotPotatoMode = true;
         }
         // Assign Roles
+        this.alive = new HashSet<>();
         this.roles = new HashMap<>();
         ArrayList<UUID> options = new ArrayList<>(getPlayers());
+        alive.addAll(options);
         options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
         if (hotPotatoMode) {
             this.potatoVictim = MiniGameUtils.getRandomElement(options);
@@ -315,9 +320,10 @@ public class MurderMysteryGame extends Game {
             player.getInventory().clear();
             player.removePotionEffect(PotionEffectType.SATURATION);
             player.setGlowing(false);
-            setRole(player, Role.DEAD);
+            setRole(player, null);
         }
 
+        this.alive = null;
         this.roles = null;
         close();
 
@@ -333,16 +339,16 @@ public class MurderMysteryGame extends Game {
     public String convertPlaceholders(String string, Player player) {
         Map map = getMap();
         Role role = getRole(player);
+        if (role == null)
+            role = Role.DEAD;
         int alive = getAlivePlayerCount();
         String time = getFormattedTimeLeft();
-        int score = -1;
+        int score = plugin.getScore(player.getUniqueId());
 
         return string
                 .replaceAll("%map%", map != null ? map.getName() : "None")
-                .replaceAll("%role%", role != null ?
-                        plugin.getConfigString("roles." + role.name().toLowerCase() + ".name") : "None")
-                .replaceAll("%goal%", role != null ?
-                        plugin.getConfigString("roles." + role.name().toLowerCase() + ".goal") : "None")
+                .replaceAll("%role%", plugin.getConfigString("roles." + role.name().toLowerCase() + ".name"))
+                .replaceAll("%goal%", plugin.getConfigString("roles." + role.name().toLowerCase() + ".goal"))
                 .replaceAll("%alive%", String.valueOf(alive))
                 .replaceAll("%time%", time)
                 .replaceAll("%score%", String.valueOf(score));
@@ -375,7 +381,8 @@ public class MurderMysteryGame extends Game {
 
         mute(player, true);
 
-        Role role = setRole(player, Role.DEAD);
+        alive.remove(player.getUniqueId());
+        Role role = getRole(player);
         if (role != null) {
 
             player.setGameMode(GameMode.SPECTATOR);
@@ -467,8 +474,32 @@ public class MurderMysteryGame extends Game {
                     plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
                     5, 100, 10);
 
+            // smyth if you are watching this you are a blongus
+
+
         }
 
+        int score = 0;
+        Predicate<UUID> winPredicate = null;
+        switch (reason) {
+
+            case MURDERER_KILLED:
+            case TIME_EXPIRED:
+                score = plugin.getConfig().getInt("score.default");
+                winPredicate = player -> roles.get(player) != Role.MURDERER;
+                break;
+            case ALL_KILLED:
+                score = plugin.getConfig().getInt("score.murderer");
+                winPredicate = player -> roles.get(player) == Role.MURDERER;
+                break;
+
+        }
+
+        for (UUID player : alive) {
+            if (winPredicate.test(player))
+                plugin.setScore(player, plugin.getScore(player) + score);
+        }
+        plugin.saveDatabase();
 
         stop();
 
@@ -533,7 +564,7 @@ public class MurderMysteryGame extends Game {
 
                 if (glow) {
                     Role role = getRole(player);
-                    if (role != Role.DEAD && role != Role.MURDERER)
+                    if (role != null && role != Role.MURDERER)
                         player.setGlowing(true);
                 }
 
