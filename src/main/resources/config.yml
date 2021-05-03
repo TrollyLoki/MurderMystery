@@ -79,7 +79,8 @@ items:
     potato_lore: '&7YAHOOHOOHOTHOT'
 
 chance:
-  hotpotato: 1
+  hotpotato: 10
+  invis: 10
 
 score:
   default: 1

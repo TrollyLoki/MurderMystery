@@ -15,8 +15,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -26,7 +25,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.EulerAngle;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class MurderMysteryGame extends Game {
@@ -100,6 +98,40 @@ public class MurderMysteryGame extends Game {
     }
 
     /**
+     * Gets the players in this game that are alive
+     *
+     * @return Set of players
+     */
+    public Set<UUID> getAlivePlayers() {
+        if (alive == null)
+            return null;
+        else
+            return Collections.unmodifiableSet(alive);
+    }
+
+    /**
+     * Gets the amount of players in this game that are alive
+     *
+     * @return Number of players
+     */
+    public int getAlivePlayerCount() {
+        if (alive == null)
+            return 0;
+        else
+            return alive.size();
+    }
+
+    /**
+     * Checks if the given player is alive
+     *
+     * @param player Player
+     * @return {@code true} if the player is alive
+     */
+    public boolean isAlive(Player player) {
+        return alive.contains(player.getUniqueId());
+    }
+
+    /**
      * Gets the role of the given player in this game
      *
      * @param player Player
@@ -132,30 +164,6 @@ public class MurderMysteryGame extends Game {
         if (previous != null)
             player.removeScoreboardTag(previous.name().toLowerCase());
         return previous;
-    }
-
-    /**
-     * Gets the players in this game that are alive
-     *
-     * @return Set of players
-     */
-    public Set<UUID> getAlivePlayers() {
-        if (alive == null)
-            return null;
-        else
-            return Collections.unmodifiableSet(alive);
-    }
-
-    /**
-     * Gets the amount of players in this game that are alive
-     *
-     * @return Number of players
-     */
-    public int getAlivePlayerCount() {
-        if (alive == null)
-            return 0;
-        else
-            return alive.size();
     }
 
     /**
@@ -192,7 +200,7 @@ public class MurderMysteryGame extends Game {
      * @throws IllegalStateException If this game is already running
      * @see #isRunning()
      */
-    public void start(Map map) {
+    public void start(Map map, int potatoChance, int invisChance) {
         if (isRunning())
             throw new IllegalStateException("Game is already running");
 
@@ -208,30 +216,21 @@ public class MurderMysteryGame extends Game {
         // Stores the time until the potato kills its host. Acts like the grace period timer.
         this.potatoTime = plugin.getConfig().getInt("time.potato");
         // Be sure to reset the hotpotato value between games!
-        this.hotPotatoMode = false;
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
-        if (Math.random() < plugin.getConfig().getInt("chance.hotpotato") / 100.0) {
-            hotPotatoMode = true;
-        }
+        hotPotatoMode = Math.random() < potatoChance / 100.0;
         // Assign Roles
         this.alive = new HashSet<>();
         this.roles = new HashMap<>();
-        ArrayList<UUID> options = new ArrayList<>(getPlayers());
-        alive.addAll(options);
-        options.removeIf(uuid -> plugin.getServer().getPlayer(uuid) == null);
+        ArrayList<Player> options = new ArrayList<>(players);
         if (hotPotatoMode) {
-            this.potatoVictim = MiniGameUtils.getRandomElement(options);
+            this.potatoVictim = MiniGameUtils.getRandomElement(options).getUniqueId();
         }
-        UUID murderer = MiniGameUtils.removeRandomElement(options);
-        setRole(Bukkit.getPlayer(murderer), Role.MURDERER);
-        UUID detective = MiniGameUtils.removeRandomElement(options);
-        setRole(Bukkit.getPlayer(detective), Role.DETECTIVE);
-        if (!options.isEmpty()) {
-            UUID underdog = MiniGameUtils.removeRandomElement(options);
-            setRole(Bukkit.getPlayer(underdog), Role.UNDERDOG);
-        }
-        for (UUID bystander : options)
-            setRole(Bukkit.getPlayer(bystander), Role.BYSTANDER);
+        setRole(MiniGameUtils.removeRandomElement(options), Role.MURDERER);
+        setRole(MiniGameUtils.removeRandomElement(options), Role.DETECTIVE);
+        if (options.size() > 2)
+            setRole(MiniGameUtils.removeRandomElement(options), Role.UNDERDOG);
+        for (Player bystander : options)
+            setRole(bystander, Role.BYSTANDER);
 
         getScoreboard().setNameTagVisibility(false);
         for (Player player : players) {
@@ -242,9 +241,13 @@ public class MurderMysteryGame extends Game {
             player.getInventory().clear();
             MiniGameUtils.clearPotionEffects(player);
             player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
-                    true, false));
+                    true, false, false));
+            if (Math.random() < invisChance / 100.0)
+                player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, time * 20, 0,
+                    false, true, true));
             player.setGameMode(GameMode.ADVENTURE);
 
+            alive.add(player.getUniqueId());
             Role role = getRole(player);
 
             // Give role items
@@ -319,6 +322,7 @@ public class MurderMysteryGame extends Game {
             player.setLevel(0);
             player.getInventory().clear();
             player.removePotionEffect(PotionEffectType.SATURATION);
+            player.removePotionEffect(PotionEffectType.INVISIBILITY);
             player.setGlowing(false);
             setRole(player, null);
         }
@@ -338,7 +342,9 @@ public class MurderMysteryGame extends Game {
      */
     public String convertPlaceholders(String string, Player player) {
         Map map = getMap();
-        Role role = getRole(player);
+        Role role = null;
+        if (isAlive(player))
+            role = getRole(player);
         if (role == null)
             role = Role.DEAD;
         int alive = getAlivePlayerCount();
@@ -696,11 +702,31 @@ public class MurderMysteryGame extends Game {
         if (!isRunning())
             return;
 
-        Role role = getRole(event.getPlayer());
-        if (droppedBow != null && (role == Role.BYSTANDER
-                || (role == Role.UNDERDOG && !event.getPlayer().getInventory().contains(Material.SNOWBALL)))
-                && event.getPlayer().getLocation().distanceSquared(droppedBow.getLocation()) <= 2.25)
-            pickupBow(event.getPlayer());
+        if (isAlive(event.getPlayer())) {
+            Role role = getRole(event.getPlayer());
+            if (droppedBow != null && (role == Role.BYSTANDER
+                    || (role == Role.UNDERDOG && !event.getPlayer().getInventory().contains(Material.SNOWBALL)))
+                    && event.getPlayer().getLocation().distanceSquared(droppedBow.getLocation()) <= 2.25)
+                pickupBow(event.getPlayer());
+        }
+    }
+
+    @Override
+    public void onPlayerGameModeChange(PlayerGameModeChangeEvent event) {
+        if (isRunning() && event.getNewGameMode() == GameMode.CREATIVE)
+            event.setCancelled(true);
+    }
+
+    @Override
+    public void onPlayerToggleFlight(PlayerToggleFlightEvent event) {
+        if (isRunning() && event.isFlying())
+            event.setCancelled(true);
+    }
+
+    @Override
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        if (isRunning())
+            event.setCancelled(true);
     }
 
     @Override
