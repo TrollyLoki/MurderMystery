@@ -39,7 +39,7 @@ public class MurderMysteryGame extends Game {
     private int time = 0, graceTime = 0, potatoTime = 0;
     private String formattedTime = "0:00";
     // Boolean that decides whether hotpotato mode is on or off
-    private boolean hotPotatoMode = false;
+    private boolean hotPotatoMode = false, invisMode = false;
     private ItemStack sword, bow, potato;
     // Stores the UUID of the player that the potato will kill eventually - this will change several times!
     private UUID potatoVictim = null;
@@ -218,6 +218,7 @@ public class MurderMysteryGame extends Game {
         // Be sure to reset the hotpotato value between games!
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
         hotPotatoMode = Math.random() < potatoChance / 100.0;
+        invisMode = Math.random() < invisChance / 100.0;
         // Assign Roles
         this.alive = new HashSet<>();
         this.roles = new HashMap<>();
@@ -242,7 +243,7 @@ public class MurderMysteryGame extends Game {
             MiniGameUtils.clearPotionEffects(player);
             player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, time * 20, 255,
                     true, false, false));
-            if (Math.random() < invisChance / 100.0)
+            if (invisMode)
                 player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, time * 20, 0,
                     false, true, true));
             player.setGameMode(GameMode.ADVENTURE);
