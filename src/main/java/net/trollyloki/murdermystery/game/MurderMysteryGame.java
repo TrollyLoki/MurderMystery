@@ -569,7 +569,7 @@ public class MurderMysteryGame extends Game {
                 if (potatoMessage != null)
                     player.sendMessage(potatoMessage);
 
-                if (glow) {
+                if (glow && isAlive(player)) {
                     Role role = getRole(player);
                     if (role != null && role != Role.MURDERER)
                         player.setGlowing(true);
