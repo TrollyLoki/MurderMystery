@@ -391,8 +391,6 @@ public class MurderMysteryGame extends Game {
         if (!isRunning())
             return null;
 
-        mute(player, true);
-
         alive.remove(player.getUniqueId());
         Role role = getRole(player);
         if (role != null) {
@@ -417,6 +415,8 @@ public class MurderMysteryGame extends Game {
 
         }
 
+        if (isRunning())
+            mute(player, true);
         return role;
     }
 
