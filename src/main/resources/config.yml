@@ -81,6 +81,7 @@ items:
 chance:
   hotpotato: 10
   invis: 10
+  speed: 10
 
 score:
   default: 1

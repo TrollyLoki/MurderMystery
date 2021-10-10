@@ -39,7 +39,7 @@ public class MurderMysteryGame extends Game {
     private int time = 0, graceTime = 0, potatoTime = 0;
     private String formattedTime = "0:00";
     // Boolean that decides whether hotpotato mode is on or off
-    private boolean hotPotatoMode = false, invisMode = false;
+    private boolean hotPotatoMode = false, invisMode = false, speedMode = false;
     private ItemStack sword, bow, potato;
     // Stores the UUID of the player that the potato will kill eventually - this will change several times!
     private UUID potatoVictim = null;
@@ -200,7 +200,7 @@ public class MurderMysteryGame extends Game {
      * @throws IllegalStateException If this game is already running
      * @see #isRunning()
      */
-    public void start(Map map, int potatoChance, int invisChance) {
+    public void start(Map map, int potatoChance, int invisChance, int speedChance) {
         if (isRunning())
             throw new IllegalStateException("Game is already running");
 
@@ -219,6 +219,7 @@ public class MurderMysteryGame extends Game {
         // This is probably a bad way to do randomness, but I'm a Valve developer so who cares
         hotPotatoMode = Math.random() < potatoChance / 100.0;
         invisMode = Math.random() < invisChance / 100.0;
+        speedMode = Math.random() < speedChance / 100.0;
         // Assign Roles
         this.alive = new HashSet<>();
         this.roles = new HashMap<>();
@@ -246,6 +247,9 @@ public class MurderMysteryGame extends Game {
             if (invisMode)
                 player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, time * 20, 0,
                     false, true, true));
+            if (speedMode)
+                player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, time * 20, 9,
+                        false, true, true));
             player.setGameMode(GameMode.ADVENTURE);
 
             alive.add(player.getUniqueId());
@@ -324,6 +328,7 @@ public class MurderMysteryGame extends Game {
             player.getInventory().clear();
             player.removePotionEffect(PotionEffectType.SATURATION);
             player.removePotionEffect(PotionEffectType.INVISIBILITY);
+            player.removePotionEffect(PotionEffectType.SPEED);
             player.setGlowing(false);
             setRole(player, null);
         }

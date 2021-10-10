@@ -55,18 +55,21 @@ public class MurderMysteryCommand implements CommandExecutor, TabCompleter {
 
                 int potatoChance = plugin.getConfig().getInt("chance.hotpotato");
                 int invisChance = plugin.getConfig().getInt("chance.invis");
+                int speedChance = plugin.getConfig().getInt("chance.speed");
                 for (int i = 2; i < args.length; i++) {
                     if (args[i].equalsIgnoreCase("potato"))
                         potatoChance = 100;
                     else if (args[i].equalsIgnoreCase("invis"))
                         invisChance = 100;
+                    else if (args[i].equalsIgnoreCase("speed"))
+                        speedChance = 100;
                 }
 
                 sender.sendMessage(ChatColor.GREEN + "Starting game on " + map.getName());
                 MurderMysteryGame game = new MurderMysteryGame(plugin.getManager(), plugin);
                 try {
                     game.addAll(party);
-                    game.start(map, potatoChance, invisChance);
+                    game.start(map, potatoChance, invisChance, speedChance);
                 } catch (IllegalStateException e) {
                     sender.sendMessage(ChatColor.RED + "Failed to start game: " + e.getMessage());
                     game.close();
