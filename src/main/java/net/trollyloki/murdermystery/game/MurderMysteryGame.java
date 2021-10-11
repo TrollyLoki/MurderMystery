@@ -718,12 +718,6 @@ public class MurderMysteryGame extends Game {
     }
 
     @Override
-    public void onPlayerGameModeChange(PlayerGameModeChangeEvent event) {
-        if (isRunning() && event.getNewGameMode() == GameMode.CREATIVE)
-            event.setCancelled(true);
-    }
-
-    @Override
     public void onPlayerToggleFlight(PlayerToggleFlightEvent event) {
         if (isRunning() && event.isFlying())
             event.setCancelled(true);
