@@ -291,8 +291,10 @@ public class MurderMysteryGame extends Game {
                 meta.setDisplayName(plugin.getConfigString("items.potato.potato_name"));
                 meta.setLore(Arrays.asList(plugin.getConfigString("items.potato.potato_lore")));
                 potato.setItemMeta(meta);
-                // Just using addItem.. not setItem, sorry
-                player.getInventory().addItem(potato);
+                if (player.getInventory().getHeldItemSlot() == 3)
+                    player.getInventory().setItem(4, potato);
+                else
+                    player.getInventory().setItem(3, potato);
 
             }
             player.getInventory().setItem(9, new ItemStack(Material.ARROW));
@@ -486,9 +488,7 @@ public class MurderMysteryGame extends Game {
                     plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
                     5, 100, 10);
 
-            // smyth if you are watching this you are a blongus
-
-
+            player.setGameMode(GameMode.SPECTATOR); // put remaining players in spectator
         }
 
         int score = 0;
