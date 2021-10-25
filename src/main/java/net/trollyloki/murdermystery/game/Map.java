@@ -8,9 +8,9 @@ import java.util.ArrayList;
 
 public class Map {
 
-    private final boolean active;
-    private final String name;
-    private final Location location;
+    private boolean active;
+    private String name;
+    private Location location;
 
     /**
      * Constructs a new map
@@ -51,33 +51,16 @@ public class Map {
         return location;
     }
 
-    /**
-     * Loads a map from a configuration section
-     *
-     * @param config Configuration section
-     * @return Map
-     */
-    public static Map load(ConfigurationSection config) {
-        return new Map(config.getBoolean("active"),
-                config.getString("name"), MiniGameUtils.loadLocation(config.getConfigurationSection("location")));
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
-    /**
-     * Loads a random map from a configuration section of maps
-     *
-     * @param mapConfig Configuration section
-     * @return Random map
-     */
-    public static Map loadRandom(ConfigurationSection mapConfig) {
-        ArrayList<String> maps = new ArrayList<>(mapConfig.getKeys(false));
+    public void setName(String name) {
+        this.name = name;
+    }
 
-        Map map;
-        do {
-            String mapKey = maps.get((int) (Math.random() * maps.size()));
-            map = load(mapConfig.getConfigurationSection(mapKey));
-        } while (!map.isActive());
-
-        return map;
+    public void setLocation(Location location) {
+        this.location = location;
     }
 
 }
