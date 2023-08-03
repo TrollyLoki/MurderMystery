@@ -488,6 +488,8 @@ public class MurderMysteryGame extends Game {
                     plugin.getConfigString("titles.end.subtitles." + reason.name().toLowerCase()),
                     5, 100, 10);
 
+            player.setExp(0); // Reset XP bar
+
             player.setGameMode(GameMode.SPECTATOR); // put remaining players in spectator
         }
 
